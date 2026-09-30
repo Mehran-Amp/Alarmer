@@ -1,0 +1,111 @@
+import '../base/currency_pair.dart';
+import '../base/exchange.dart';
+import '../base/models/price_snapshot.dart';
+
+/// Central Exchange Registry (inspired by aneonex/BitcoinChecker).
+/// Manages all registered exchanges, handles dynamic pair discovery,
+/// and provides manual refresh capabilities.
+class ExchangeRegistry {
+  final Map<String, Exchange> _exchanges = {};
+  final Map<String, List<CurrencyPair>> _cachedPairsByExchange = {};
+
+  ExchangeRegistry();
+
+  /// Registers an exchange adapter instance
+  void register(Exchange exchange) {
+    _exchanges[exchange.id] = exchange;
+  }
+
+  /// Retrieves an exchange adapter by its unique ID
+  Exchange? get(String exchangeId) => _exchanges[exchangeId];
+
+  /// Returns all currently registered exchanges
+  List<Exchange> getAll() => _exchanges.values.toList();
+
+  /// Map of all exchanges
+  Map<String, Exchange> get asMap => Map.unmodifiable(_exchanges);
+
+  /// Fetches a lightweight price & volume snapshot directly from the specified exchange
+  Future<PriceSnapshot?> fetchSnapshotFrom(String exchangeId, CurrencyPair pair) async {
+    final exchange = _exchanges[exchangeId];
+    if (exchange == null) return null;
+    return await exchange.fetchSnapshot(pair);
+  }
+
+  /// Preloads or gets cached currency pairs for a specific exchange
+  Future<List<CurrencyPair>> getCurrencyPairs(String exchangeId) async {
+    final cached = _cachedPairsByExchange[exchangeId];
+    if (cached != null && cached.isNotEmpty) {
+      return cached;
+    }
+
+    return await refreshCurrencyPairs(exchangeId);
+  }
+
+  /// Force refresh currency pairs from the specified exchange
+  Future<List<CurrencyPair>> refreshCurrencyPairs(String exchangeId) async {
+    final exchange = _exchanges[exchangeId];
+    if (exchange == null) {
+      throw Exception('Exchange $exchangeId not found in registry');
+    }
+
+    _cachedPairsByExchange.remove(exchangeId);
+    final pairs = await exchange.fetchCurrencyPairs();
+    _cachedPairsByExchange[exchangeId] = pairs;
+    return pairs;
+  }
+
+  /// Cross-exchange search: Finds matching currency pairs across all registered exchanges
+  Future<Map<String, List<CurrencyPair>>> searchPairsAcrossExchanges(String query) async {
+    final cleanQuery = query.trim().toUpperCase();
+    final results = <String, List<CurrencyPair>>{};
+
+    for (final exchange in _exchanges.values) {
+      try {
+        final pairs = await getCurrencyPairs(exchange.id);
+        final matched = pairs.where((p) {
+          if (cleanQuery.isEmpty) return true;
+          return p.baseCurrency.toUpperCase().contains(cleanQuery) ||
+              p.counterCurrency.toUpperCase().contains(cleanQuery) ||
+              p.marketSymbol.toUpperCase().contains(cleanQuery);
+        }).take(50).toList();
+
+        if (matched.isNotEmpty) {
+          results[exchange.id] = matched;
+        }
+      } catch (_) {}
+    }
+
+    return results;
+  }
+
+  /// Finds which registered exchanges offer a specific pair (e.g. BTC / USDT)
+  Future<List<Exchange>> findExchangesForPair({
+    required String baseCurrency,
+    required String counterCurrency,
+  }) async {
+    final b = baseCurrency.toUpperCase();
+    final c = counterCurrency.toUpperCase();
+    final available = <Exchange>[];
+
+    for (final exchange in _exchanges.values) {
+      try {
+        final pairs = await getCurrencyPairs(exchange.id);
+        final exists = pairs.any(
+          (p) => p.baseCurrency.toUpperCase() == b && p.counterCurrency.toUpperCase() == c,
+        );
+        if (exists) {
+          available.add(exchange);
+        }
+      } catch (_) {}
+    }
+
+    return available;
+  }
+
+  /// Clears all registered exchanges and cached pairs
+  void disposeAll() {
+    _exchanges.clear();
+    _cachedPairsByExchange.clear();
+  }
+}
