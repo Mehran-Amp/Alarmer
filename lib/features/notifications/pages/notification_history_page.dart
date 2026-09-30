@@ -1,16 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/constants/strings.dart';
+import '../../../../core/localization/app_strings.dart';
 import '../../../../core/theme/tokens.dart';
+import '../../settings/services/settings_service.dart';
 import '../models/notification_log.dart';
 import '../repositories/notification_repository.dart';
 import '../widgets/history_group_header.dart';
 
 enum HistoryFilter { all, triggered, suppressed }
 
-/// Chronological Notification History Page.
-/// Groups logged events by date (Today, Yesterday, MMM d, yyyy),
-/// supports pull-to-refresh from local storage, and filter chips.
 class NotificationHistoryPage extends StatefulWidget {
   const NotificationHistoryPage({super.key});
 
@@ -44,6 +43,10 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final settingsService = context.watch<SettingsService>();
+    final lang = settingsService.settings.language;
+
     final filteredLogs = _logs.where((log) {
       if (_currentFilter == HistoryFilter.all) return true;
       if (_currentFilter == HistoryFilter.triggered) {
@@ -55,15 +58,21 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
       return true;
     }).toList();
 
-    // Group logs by day
     final groupedLogs = _groupLogsByDay(filteredLogs);
 
     return Scaffold(
-      backgroundColor: AppTokens.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppTokens.surface,
+        backgroundColor: theme.colorScheme.surface,
         elevation: 0,
-        title: const Text(S.notificationHistoryTitle, style: AppTokens.displayTitle),
+        title: Text(
+          AppStrings.get('history', lang),
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
       ),
       body: Column(
         children: [
@@ -75,11 +84,11 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
             ),
             child: Row(
               children: [
-                _buildFilterChip(HistoryFilter.all, S.filterAll),
+                _buildFilterChip(HistoryFilter.all, S.filterAll, theme),
                 const SizedBox(width: AppTokens.space8),
-                _buildFilterChip(HistoryFilter.triggered, S.filterTriggered),
+                _buildFilterChip(HistoryFilter.triggered, S.filterTriggered, theme),
                 const SizedBox(width: AppTokens.space8),
-                _buildFilterChip(HistoryFilter.suppressed, S.filterSuppressed),
+                _buildFilterChip(HistoryFilter.suppressed, S.filterSuppressed, theme),
               ],
             ),
           ),
@@ -87,7 +96,7 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
           // Log Entries List
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator(color: AppTokens.primary))
+                ? Center(child: CircularProgressIndicator(color: theme.colorScheme.primary))
                 : filteredLogs.isEmpty
                     ? Center(
                         child: Padding(
@@ -97,23 +106,34 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
                             children: [
                               Container(
                                 padding: const EdgeInsets.all(AppTokens.space24),
-                                decoration: const BoxDecoration(
-                                  color: AppTokens.surface,
+                                decoration: BoxDecoration(
+                                  color: theme.cardColor,
                                   shape: BoxShape.circle,
+                                  border: Border.all(color: theme.dividerColor),
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                   Icons.history_toggle_off_rounded,
                                   size: 48,
-                                  color: AppTokens.textMuted,
+                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
                                 ),
                               ),
                               const SizedBox(height: AppTokens.space16),
-                              const Text(S.noHistoryTitle, style: AppTokens.sectionHeader),
+                              Text(
+                                S.noHistoryTitle,
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.onSurface,
+                                ),
+                              ),
                               const SizedBox(height: AppTokens.space8),
                               Text(
                                 S.noHistorySubtitle,
                                 textAlign: TextAlign.center,
-                                style: AppTokens.bodySecondary,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                                ),
                               ),
                             ],
                           ),
@@ -121,8 +141,8 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
                       )
                     : RefreshIndicator(
                         onRefresh: _loadLogs,
-                        color: AppTokens.primary,
-                        backgroundColor: AppTokens.surface,
+                        color: theme.colorScheme.primary,
+                        backgroundColor: theme.colorScheme.surface,
                         child: ListView.builder(
                           physics: const AlwaysScrollableScrollPhysics(),
                           itemCount: groupedLogs.length,
@@ -133,7 +153,7 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 HistoryGroupHeader(date: group.date),
-                                ...group.logs.map((log) => _buildLogCard(log)),
+                                ...group.logs.map((log) => _buildLogCard(log, theme)),
                               ],
                             );
                           },
@@ -145,27 +165,27 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
     );
   }
 
-  Widget _buildFilterChip(HistoryFilter filter, String label) {
+  Widget _buildFilterChip(HistoryFilter filter, String label, ThemeData theme) {
     final isSelected = _currentFilter == filter;
     return ChoiceChip(
       label: Text(label),
       selected: isSelected,
       onSelected: (_) => setState(() => _currentFilter = filter),
-      selectedColor: AppTokens.primarySubtle,
-      backgroundColor: AppTokens.surfaceElevated,
+      selectedColor: theme.colorScheme.primary.withValues(alpha: 0.15),
+      backgroundColor: theme.colorScheme.surfaceContainerHighest,
       labelStyle: TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.w600,
-        color: isSelected ? AppTokens.primary : AppTokens.textSecondary,
+        color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.7),
       ),
       side: BorderSide(
-        color: isSelected ? AppTokens.primary : AppTokens.borderSubtle,
+        color: isSelected ? theme.colorScheme.primary : theme.dividerColor,
       ),
-      shape: const RoundedRectangleBorder(borderRadius: AppTokens.borderFull),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     );
   }
 
-  Widget _buildLogCard(NotificationLog log) {
+  Widget _buildLogCard(NotificationLog log, ThemeData theme) {
     final isWarning = log.message.contains('cooldown') || log.message.contains('Suppressed');
 
     return Container(
@@ -175,12 +195,12 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
       ),
       padding: const EdgeInsets.all(AppTokens.space12),
       decoration: BoxDecoration(
-        color: AppTokens.surface,
-        borderRadius: AppTokens.borderMedium,
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isWarning
-              ? AppTokens.warning.withValues(alpha: 0.3)
-              : AppTokens.borderSubtle,
+              ? AppTokens.warning.withValues(alpha: 0.4)
+              : theme.dividerColor,
         ),
       ),
       child: Column(
@@ -192,25 +212,39 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
             children: [
               Row(
                 children: [
-                  Text(log.marketSymbol, style: AppTokens.sectionHeader.copyWith(fontSize: 14)),
+                  Text(
+                    log.marketSymbol,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
                   const SizedBox(width: AppTokens.space8),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: AppTokens.space6, vertical: 1.5),
-                    decoration: const BoxDecoration(
-                      color: AppTokens.surfaceElevated,
-                      borderRadius: AppTokens.borderSmall,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: theme.dividerColor),
                     ),
                     child: Text(
                       log.exchangeId.toUpperCase(),
-                      style: AppTokens.caption.copyWith(color: AppTokens.secondary, fontSize: 10),
+                      style: TextStyle(
+                        color: theme.colorScheme.primary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
               ),
               Text(
                 _formatTimestamp(log.timestamp),
-                style: AppTokens.caption.copyWith(
-                  fontFeatures: const [FontFeature.tabularFigures()],
+                style: TextStyle(
+                  fontSize: 11,
+                  fontFamily: 'monospace',
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                 ),
               ),
             ],
@@ -218,17 +252,28 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
           const SizedBox(height: AppTokens.space6),
 
           // Message & Triggered Price
-          Text(log.message, style: AppTokens.bodySecondary),
+          Text(
+            log.message,
+            style: TextStyle(
+              fontSize: 12,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
+            ),
+          ),
           const SizedBox(height: AppTokens.space6),
 
           // Price Tag
           Row(
             children: [
-              const Text('Trigger Price: ', style: AppTokens.caption),
+              Text(
+                'Trigger Price: ',
+                style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+              ),
               Text(
                 '\$${log.triggeredPrice.toStringAsFixed(2)}',
-                style: AppTokens.monoNumbersSmall.copyWith(
-                  color: AppTokens.primary,
+                style: TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                  color: theme.colorScheme.primary,
                   fontWeight: FontWeight.w700,
                 ),
               ),

@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/localization/app_strings.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../alert_engine/repositories/json_alert_rule_repository.dart';
@@ -58,10 +58,11 @@ class _SettingsPageState extends State<SettingsPage> {
         _isBatteryExempt = status.isGranted;
       });
       if (status.isGranted) {
+        final theme = Theme.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('معافیت از بهینه‌سازی باتری با موفقیت ثبت شد.'),
-            backgroundColor: AppTokens.surfaceElevated,
+          SnackBar(
+            content: const Text('معافیت از بهینه‌سازی باتری با موفقیت ثبت شد.'),
+            backgroundColor: theme.colorScheme.surfaceContainerHighest,
           ),
         );
       }
@@ -69,9 +70,10 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _showLanguagePicker(BuildContext context, SettingsService settingsService, String currentLang) {
+    final theme = Theme.of(context);
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppTokens.surface,
+      backgroundColor: theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -88,10 +90,14 @@ class _SettingsPageState extends State<SettingsPage> {
                   children: [
                     Text(
                       AppStrings.get('select_language', currentLang),
-                      style: AppTokens.sectionHeader,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.onSurface,
+                      ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close_rounded, color: AppTokens.textMuted),
+                      icon: Icon(Icons.close_rounded, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
                       onPressed: () => Navigator.pop(ctx),
                     ),
                   ],
@@ -100,7 +106,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 Expanded(
                   child: ListView.separated(
                     itemCount: _supportedLanguages.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1, color: AppTokens.borderSubtle),
+                    separatorBuilder: (_, __) => Divider(height: 1, color: theme.dividerColor),
                     itemBuilder: (context, index) {
                       final lang = _supportedLanguages[index];
                       final isSelected = currentLang == lang['code'];
@@ -108,13 +114,26 @@ class _SettingsPageState extends State<SettingsPage> {
                         color: Colors.transparent,
                         child: ListTile(
                           leading: Text(lang['flag']!, style: const TextStyle(fontSize: 22)),
-                          title: Text(lang['native']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                          subtitle: Text(lang['name']!, style: AppTokens.caption),
+                          title: Text(
+                            lang['native']!,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: theme.colorScheme.onSurface,
+                            ),
+                          ),
+                          subtitle: Text(
+                            lang['name']!,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+                            ),
+                          ),
                           trailing: isSelected
-                              ? const Icon(Icons.check_circle_rounded, color: AppTokens.primary)
+                              ? Icon(Icons.check_circle_rounded, color: theme.colorScheme.primary)
                               : null,
                           selected: isSelected,
-                          selectedTileColor: AppTokens.primarySubtle,
+                          selectedTileColor: theme.colorScheme.primary.withValues(alpha: 0.12),
                           onTap: () async {
                             await settingsService.setLanguage(lang['code']!);
                             if (ctx.mounted) Navigator.pop(ctx);
@@ -135,18 +154,16 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _testAlarm(BuildContext context, String lang) async {
     final notifService = context.read<NotificationService>();
     final settingsService = context.read<SettingsService>();
+    final theme = Theme.of(context);
 
-    // 1. Haptic feedback
     if (settingsService.settings.vibrationEnabled) {
       await HapticFeedback.heavyImpact();
     }
 
-    // 2. Sound
     if (settingsService.settings.soundEnabled) {
       await SystemSound.play(SystemSoundType.alert);
     }
 
-    // 3. System Notification
     await notifService.showCriticalAlert(
       id: 99999,
       title: AppStrings.get('test_alert_title', lang),
@@ -157,7 +174,7 @@ class _SettingsPageState extends State<SettingsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AppStrings.get('test_alert_body', lang)),
-          backgroundColor: AppTokens.surfaceElevated,
+          backgroundColor: theme.colorScheme.surfaceContainerHighest,
           duration: const Duration(seconds: 3),
         ),
       );
@@ -166,6 +183,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _exportBackup(BuildContext context, String lang) async {
     final repo = context.read<JsonAlertRuleRepository>();
+    final theme = Theme.of(context);
     final jsonString = await repo.exportAlertsToJson();
     await Clipboard.setData(ClipboardData(text: jsonString));
 
@@ -173,7 +191,7 @@ class _SettingsPageState extends State<SettingsPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AppStrings.get('backup_copied', lang)),
-          backgroundColor: AppTokens.surfaceElevated,
+          backgroundColor: theme.colorScheme.surfaceContainerHighest,
           duration: const Duration(seconds: 4),
         ),
       );
@@ -182,31 +200,35 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _importBackup(BuildContext context, String lang) async {
     final controller = TextEditingController();
+    final theme = Theme.of(context);
 
     final jsonString = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTokens.surface,
-        shape: const RoundedRectangleBorder(borderRadius: AppTokens.borderLarge),
-        title: Text(AppStrings.get('restore_backup', lang), style: AppTokens.sectionHeader),
+        backgroundColor: theme.colorScheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          AppStrings.get('restore_backup', lang),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: theme.colorScheme.onSurface),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'متن فایل JSON پشتیبان‌گیری شده را در کادر زیر جای‌گذاری (Paste) کنید:',
-              style: AppTokens.bodySecondary,
+              style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: controller,
               maxLines: 6,
-              style: AppTokens.monoNumbersSmall,
-              decoration: const InputDecoration(
+              style: TextStyle(fontFamily: 'monospace', fontSize: 12, color: theme.colorScheme.onSurface),
+              decoration: InputDecoration(
                 hintText: '[{"uuid": "...", "marketSymbol": "BTCUSDT", ...}]',
                 filled: true,
-                fillColor: AppTokens.surfaceElevated,
-                border: OutlineInputBorder(borderRadius: AppTokens.borderMedium),
+                fillColor: theme.colorScheme.surfaceContainerHighest,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               ),
             ),
           ],
@@ -214,13 +236,16 @@ class _SettingsPageState extends State<SettingsPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('انصراف', style: TextStyle(color: AppTokens.textSecondary)),
+            child: Text(
+              'انصراف',
+              style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTokens.primary,
-              foregroundColor: AppTokens.background,
+              backgroundColor: theme.colorScheme.primary,
+              foregroundColor: Colors.white,
             ),
             child: const Text('تأیید و بازیابی'),
           ),
@@ -236,7 +261,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('🎉 $count ${AppStrings.get('restore_success', lang)}'),
-              backgroundColor: AppTokens.surfaceElevated,
+              backgroundColor: theme.colorScheme.surfaceContainerHighest,
             ),
           );
         }
@@ -254,17 +279,27 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Future<void> _clearHistory(BuildContext context, String lang) async {
+    final theme = Theme.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTokens.surface,
-        shape: const RoundedRectangleBorder(borderRadius: AppTokens.borderLarge),
-        title: Text(AppStrings.get('clear_history', lang), style: AppTokens.sectionHeader),
-        content: const Text('آیا از پاک کردن تمامی اعلان‌ها و رکوردهای ثبت‌شده اطمینان دارید؟'),
+        backgroundColor: theme.colorScheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          AppStrings.get('clear_history', lang),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: theme.colorScheme.onSurface),
+        ),
+        content: Text(
+          'آیا از پاک کردن تمامی اعلان‌ها و رکوردهای ثبت‌شده اطمینان دارید؟',
+          style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('انصراف', style: TextStyle(color: AppTokens.textSecondary)),
+            child: Text(
+              'انصراف',
+              style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(true),
@@ -283,9 +318,9 @@ class _SettingsPageState extends State<SettingsPage> {
       await repo.clearAllLogs();
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('تمامی لاگ‌های تاریخچه اعلان‌ها پاک شدند.'),
-            backgroundColor: AppTokens.surfaceElevated,
+          SnackBar(
+            content: const Text('تمامی لاگ‌های تاریخچه اعلان‌ها پاک شدند.'),
+            backgroundColor: theme.colorScheme.surfaceContainerHighest,
           ),
         );
       }
@@ -297,6 +332,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final settingsService = context.watch<SettingsService>();
     final settings = settingsService.settings;
     final lang = settings.language;
+    final theme = Theme.of(context);
 
     final currentLangObj = _supportedLanguages.firstWhere(
       (l) => l['code'] == lang,
@@ -304,25 +340,32 @@ class _SettingsPageState extends State<SettingsPage> {
     );
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.surface,
+        backgroundColor: theme.colorScheme.surface,
         elevation: 0,
-        title: Text(AppStrings.get('settings', lang), style: AppTokens.displayTitle),
+        title: Text(
+          AppStrings.get('settings', lang),
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: theme.colorScheme.onSurface,
+          ),
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: AppTokens.space16, vertical: AppTokens.space20),
         children: [
-          // Section 1: Themes & Colors (4 Modes) - Real & Reactive
-          _buildSectionHeader(AppStrings.get('theme_and_colors', lang)),
+          // Section 1: Themes & Colors (4 Modes) - Reactive
+          _buildSectionHeader(AppStrings.get('theme_and_colors', lang), theme),
           const SizedBox(height: AppTokens.space8),
 
           Container(
             padding: const EdgeInsets.all(AppTokens.space16),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: AppTokens.borderMedium,
-              border: Border.all(color: AppTokens.borderSubtle),
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: theme.dividerColor),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -339,7 +382,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       palette: AppThemePalette.darkGreen,
                       currentPalette: settings.themePalette,
                       title: AppStrings.get('theme_dark_green', lang),
-                      bgPreview: const Color(0xFF020617),
+                      bgPreview: const Color(0xFF090D16),
                       accent: const Color(0xFF10B981),
                       onSelect: () => settingsService.setPalette(AppThemePalette.darkGreen),
                     ),
@@ -347,7 +390,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       palette: AppThemePalette.lightGreen,
                       currentPalette: settings.themePalette,
                       title: AppStrings.get('theme_light_green', lang),
-                      bgPreview: const Color(0xFFF8FAFC),
+                      bgPreview: const Color(0xFFF3F4F6),
                       accent: const Color(0xFF059669),
                       onSelect: () => settingsService.setPalette(AppThemePalette.lightGreen),
                     ),
@@ -363,7 +406,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       palette: AppThemePalette.lightOrange,
                       currentPalette: settings.themePalette,
                       title: AppStrings.get('theme_light_orange', lang),
-                      bgPreview: const Color(0xFFFAFAF9),
+                      bgPreview: const Color(0xFFFAF8F5),
                       accent: const Color(0xFFEA580C),
                       onSelect: () => settingsService.setPalette(AppThemePalette.lightOrange),
                     ),
@@ -374,19 +417,19 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: AppTokens.space20),
 
-          // Section 2: Languages (10 Languages) - Real & Reactive
-          _buildSectionHeader(AppStrings.get('select_language', lang)),
+          // Section 2: Languages (10 Languages)
+          _buildSectionHeader(AppStrings.get('select_language', lang), theme),
           const SizedBox(height: AppTokens.space8),
 
           InkWell(
             onTap: () => _showLanguagePicker(context, settingsService, lang),
-            borderRadius: AppTokens.borderMedium,
+            borderRadius: BorderRadius.circular(14),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: AppTokens.space16, vertical: AppTokens.space12),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: AppTokens.borderMedium,
-                border: Border.all(color: AppTokens.borderSubtle),
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: theme.dividerColor),
               ),
               child: Row(
                 children: [
@@ -395,46 +438,62 @@ class _SettingsPageState extends State<SettingsPage> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(currentLangObj['native']!, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                      Text('${currentLangObj['name']} (۱۰ زبان)', style: AppTokens.caption),
+                      Text(
+                        currentLangObj['native']!,
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: theme.colorScheme.onSurface),
+                      ),
+                      Text(
+                        '${currentLangObj['name']} (۱۰ زبان)',
+                        style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.55)),
+                      ),
                     ],
                   ),
                   const Spacer(),
-                  const Icon(Icons.arrow_drop_down_rounded, color: AppTokens.textSecondary, size: 28),
+                  Icon(
+                    Icons.arrow_drop_down_rounded,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    size: 28,
+                  ),
                 ],
               ),
             ),
           ),
           const SizedBox(height: AppTokens.space20),
 
-          // Section 3: Sound & Vibration Toggles + Real Test Alarm Button
-          _buildSectionHeader(AppStrings.get('sound_and_vibrate', lang)),
+          // Section 3: Sound & Vibration Toggles
+          _buildSectionHeader(AppStrings.get('sound_and_vibrate', lang), theme),
           const SizedBox(height: AppTokens.space8),
 
           Container(
             padding: const EdgeInsets.symmetric(horizontal: AppTokens.space16, vertical: AppTokens.space8),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: AppTokens.borderMedium,
-              border: Border.all(color: AppTokens.borderSubtle),
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: theme.dividerColor),
             ),
             child: Column(
               children: [
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  secondary: const Icon(Icons.volume_up_rounded, color: AppTokens.primary),
-                  title: Text(AppStrings.get('sound_alert', lang), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                  secondary: Icon(Icons.volume_up_rounded, color: theme.colorScheme.primary),
+                  title: Text(
+                    AppStrings.get('sound_alert', lang),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                  ),
                   value: settings.soundEnabled,
-                  activeColor: AppTokens.primary,
+                  activeColor: theme.colorScheme.primary,
                   onChanged: (val) => settingsService.toggleSound(val),
                 ),
-                const Divider(height: 1, color: AppTokens.borderSubtle),
+                Divider(height: 1, color: theme.dividerColor),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  secondary: const Icon(Icons.vibration_rounded, color: AppTokens.primary),
-                  title: Text(AppStrings.get('vibrate_alert', lang), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                  secondary: Icon(Icons.vibration_rounded, color: theme.colorScheme.primary),
+                  title: Text(
+                    AppStrings.get('vibrate_alert', lang),
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                  ),
                   value: settings.vibrationEnabled,
-                  activeColor: AppTokens.primary,
+                  activeColor: theme.colorScheme.primary,
                   onChanged: (val) => settingsService.toggleVibration(val),
                 ),
                 const SizedBox(height: 8),
@@ -448,8 +507,8 @@ class _SettingsPageState extends State<SettingsPage> {
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTokens.primary,
-                      foregroundColor: AppTokens.background,
+                      backgroundColor: theme.colorScheme.primary,
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
@@ -460,29 +519,32 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: AppTokens.space20),
 
-          // Section 4: Backup & Restore (Real JSON export & import)
-          _buildSectionHeader(AppStrings.get('backup_and_restore', lang)),
+          // Section 4: Backup & Restore
+          _buildSectionHeader(AppStrings.get('backup_and_restore', lang), theme),
           const SizedBox(height: AppTokens.space8),
 
           _buildActionTile(
+            context: context,
             title: AppStrings.get('export_backup', lang),
             subtitle: 'خروجی گرفتن از تمام هشدارهای فعال در قالب فایل JSON',
             icon: Icons.cloud_upload_rounded,
-            color: AppTokens.primary,
+            color: theme.colorScheme.primary,
             onTap: () => _exportBackup(context, lang),
           ),
           const SizedBox(height: AppTokens.space8),
 
           _buildActionTile(
+            context: context,
             title: AppStrings.get('restore_backup', lang),
             subtitle: 'وارد کردن و بازگردانی هشدارها از فایل یا متن JSON',
             icon: Icons.cloud_download_rounded,
-            color: AppTokens.secondary,
+            color: theme.colorScheme.secondary,
             onTap: () => _importBackup(context, lang),
           ),
           const SizedBox(height: AppTokens.space8),
 
           _buildActionTile(
+            context: context,
             title: AppStrings.get('clear_history', lang),
             subtitle: 'حذف تمامی گزارش‌ها و لاگ‌های ثبت‌شده',
             icon: Icons.delete_outline_rounded,
@@ -493,17 +555,17 @@ class _SettingsPageState extends State<SettingsPage> {
 
           // Section 5: Battery Optimization Exemption
           if (defaultTargetPlatform == TargetPlatform.android) ...[
-            _buildSectionHeader(AppStrings.get('battery_settings', lang)),
+            _buildSectionHeader(AppStrings.get('battery_settings', lang), theme),
             const SizedBox(height: AppTokens.space8),
 
             Container(
               padding: const EdgeInsets.all(AppTokens.space16),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: AppTokens.borderMedium,
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(14),
                 border: Border.all(
                   color: _isBatteryExempt
-                      ? AppTokens.primary.withValues(alpha: 0.3)
+                      ? theme.colorScheme.primary.withValues(alpha: 0.3)
                       : AppTokens.warning.withValues(alpha: 0.3),
                 ),
               ),
@@ -514,7 +576,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     children: [
                       Icon(
                         _isBatteryExempt ? Icons.battery_charging_full_rounded : Icons.battery_alert_rounded,
-                        color: _isBatteryExempt ? AppTokens.primary : AppTokens.warning,
+                        color: _isBatteryExempt ? theme.colorScheme.primary : AppTokens.warning,
                         size: 24,
                       ),
                       const SizedBox(width: AppTokens.space12),
@@ -522,12 +584,15 @@ class _SettingsPageState extends State<SettingsPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('معافیت از محدودیت باتری', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            Text(
+                              'معافیت از محدودیت باتری',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
+                            ),
                             Text(
                               _isBatteryExempt ? 'فعال (هشدارها سر وقت اجرا می‌شوند)' : 'غیرفعال (ممکن است سیستم هشدار را متوقف کند)',
                               style: TextStyle(
                                 fontSize: 11,
-                                color: _isBatteryExempt ? AppTokens.primary : AppTokens.warning,
+                                color: _isBatteryExempt ? theme.colorScheme.primary : AppTokens.warning,
                               ),
                             ),
                           ],
@@ -542,8 +607,8 @@ class _SettingsPageState extends State<SettingsPage> {
                       child: ElevatedButton(
                         onPressed: _requestBatteryExemption,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTokens.primary,
-                          foregroundColor: AppTokens.background,
+                          backgroundColor: theme.colorScheme.primary,
+                          foregroundColor: Colors.white,
                         ),
                         child: Text(AppStrings.get('battery_request', lang)),
                       ),
@@ -558,13 +623,13 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(String title, ThemeData theme) {
     return Text(
       title,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.bold,
-        color: AppTokens.textSecondary,
+        color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
       ),
     );
   }
@@ -580,14 +645,14 @@ class _SettingsPageState extends State<SettingsPage> {
     final isSelected = currentPalette == palette;
     return InkWell(
       onTap: onSelect,
-      borderRadius: AppTokens.borderSmall,
+      borderRadius: BorderRadius.circular(10),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: bgPreview,
-          borderRadius: AppTokens.borderSmall,
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isSelected ? accent : AppTokens.borderSubtle,
+            color: isSelected ? accent : Colors.grey.withValues(alpha: 0.3),
             width: isSelected ? 2.0 : 1.0,
           ),
         ),
@@ -611,7 +676,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: bgPreview.computeLuminance() > 0.5 ? Colors.black87 : Colors.white,
+                  color: bgPreview.computeLuminance() > 0.5 ? const Color(0xFF111827) : Colors.white,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -623,23 +688,25 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   Widget _buildActionTile({
+    required BuildContext context,
     required String title,
     required String subtitle,
     required IconData icon,
     required Color color,
     required VoidCallback onTap,
   }) {
+    final theme = Theme.of(context);
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: AppTokens.borderMedium,
+        borderRadius: BorderRadius.circular(14),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: AppTokens.space16, vertical: AppTokens.space12),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: AppTokens.borderMedium,
-            border: Border.all(color: AppTokens.borderSubtle),
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: theme.dividerColor),
           ),
           child: Row(
             children: [
@@ -647,7 +714,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.15),
-                  borderRadius: AppTokens.borderSmall,
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(icon, color: color, size: 22),
               ),
@@ -656,13 +723,30 @@ class _SettingsPageState extends State<SettingsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
                     const SizedBox(height: 2),
-                    Text(subtitle, style: AppTokens.caption),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+                      ),
+                    ),
                   ],
                 ),
               ),
-              const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppTokens.textMuted),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 14,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+              ),
             ],
           ),
         ),

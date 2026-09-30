@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/constants/strings.dart';
 import '../../../../core/localization/app_strings.dart';
 import '../../../../core/theme/tokens.dart';
@@ -12,7 +12,7 @@ import '../../exchanges/registry/exchange_registry.dart';
 import '../../settings/services/settings_service.dart';
 import 'create_alert_flow.dart';
 
-/// The Main Screen of BitcoinChecker: Personal Price Alerts.
+/// The Main Screen of Alarmer: Personal Price Alerts.
 /// Highlights the latest checked price prominently (large and bold).
 class WatchlistPage extends StatefulWidget {
   const WatchlistPage({super.key});
@@ -40,10 +40,11 @@ class _WatchlistPageState extends State<WatchlistPage> {
     try {
       await scheduler.checkRuleNow(rule);
       if (mounted) {
+        final theme = Theme.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('بررسی قیمت انجام شد: ${rule.pair.displayName}'),
-            backgroundColor: AppTokens.surfaceElevated,
+            backgroundColor: theme.colorScheme.surfaceContainerHighest,
             duration: const Duration(seconds: 2),
           ),
         );
@@ -87,12 +88,19 @@ class _WatchlistPageState extends State<WatchlistPage> {
                 children: [
                   Text(
                     AppStrings.get('my_alerts', lang),
-                    style: AppTokens.displayTitle.copyWith(fontSize: 16),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface,
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                   Text(
                     AppStrings.get('smart_alerts_desc', lang),
-                    style: const TextStyle(fontSize: 10, color: AppTokens.textMuted),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
@@ -113,7 +121,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: theme.colorScheme.primary,
                 foregroundColor: Colors.white,
-                elevation: 2,
+                elevation: 0,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
@@ -158,6 +166,8 @@ class _WatchlistPageState extends State<WatchlistPage> {
     final theme = Theme.of(context);
     final isTriggeredOneShot = rule.isTriggered && rule.triggerMode == TriggerMode.oneShot;
     final isChecking = _checkingRuleUuids.contains(rule.uuid);
+    final textMuted = theme.colorScheme.onSurface.withValues(alpha: 0.45);
+    final textSecondary = theme.colorScheme.onSurface.withValues(alpha: 0.7);
 
     final displayPrice = rule.currentDisplayPrice;
     final basePrice = rule.basePrice;
@@ -184,7 +194,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('هشدار ${rule.pair.displayName} حذف شد'),
-            backgroundColor: AppTokens.surfaceElevated,
+            backgroundColor: theme.colorScheme.surfaceContainerHighest,
             action: SnackBarAction(
               label: 'بازگردانی',
               textColor: theme.colorScheme.primary,
@@ -200,13 +210,13 @@ class _WatchlistPageState extends State<WatchlistPage> {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isTriggeredOneShot
-                ? AppTokens.warning.withValues(alpha: 0.6)
-                : (rule.isActive ? AppTokens.borderSubtle : AppTokens.borderSubtle.withValues(alpha: 0.3)),
+                ? AppTokens.warning.withValues(alpha: 0.7)
+                : theme.dividerColor,
             width: isTriggeredOneShot ? 1.5 : 1.0,
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.1),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -228,7 +238,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
-                          color: rule.isActive ? null : AppTokens.textMuted,
+                          color: rule.isActive ? theme.colorScheme.onSurface : textMuted,
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -243,7 +253,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
                               style: TextStyle(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w500,
-                                color: rule.isActive ? AppTokens.textSecondary : AppTokens.textMuted,
+                                color: rule.isActive ? textSecondary : textMuted,
                               ),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -264,8 +274,8 @@ class _WatchlistPageState extends State<WatchlistPage> {
                         fontWeight: FontWeight.w800,
                         fontFamily: 'monospace',
                         color: rule.isActive
-                            ? (changePercent != null && changePercent >= 0 ? AppTokens.primary : Colors.white)
-                            : AppTokens.textMuted,
+                            ? (changePercent != null && changePercent >= 0 ? theme.colorScheme.primary : theme.colorScheme.onSurface)
+                            : textMuted,
                       ),
                     ),
                     if (changePercent != null)
@@ -275,7 +285,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                           fontFamily: 'monospace',
-                          color: changePercent >= 0 ? AppTokens.primary : AppTokens.negative,
+                          color: changePercent >= 0 ? AppTokens.positive : AppTokens.negative,
                         ),
                       ),
                   ],
@@ -290,8 +300,8 @@ class _WatchlistPageState extends State<WatchlistPage> {
                         )
                       : Switch(
                           value: rule.isActive,
-                          activeThumbColor: theme.colorScheme.primary,
-                          activeTrackColor: theme.colorScheme.primary.withValues(alpha: 0.3),
+                          activeThumbColor: Colors.white,
+                          activeTrackColor: theme.colorScheme.primary,
                           onChanged: (val) => repository.saveRule(rule.copyWith(isActive: val)),
                         ),
                 ),
@@ -300,7 +310,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
 
             const SizedBox(height: 8),
 
-            // Row 2 (NEW dedicated line for alert condition):
+            // Row 2: Condition Summary Tag
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -325,7 +335,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
                       style: TextStyle(
                         fontSize: 11.5,
                         fontWeight: FontWeight.w600,
-                        color: rule.isActive ? AppTokens.textPrimary : AppTokens.textMuted,
+                        color: rule.isActive ? theme.colorScheme.onSurface : textMuted,
                       ),
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -342,9 +352,9 @@ class _WatchlistPageState extends State<WatchlistPage> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: AppTokens.surfaceElevated,
+                    color: theme.colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: AppTokens.borderSubtle),
+                    border: Border.all(color: theme.dividerColor),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -362,14 +372,14 @@ class _WatchlistPageState extends State<WatchlistPage> {
                   const SizedBox(width: 8),
                   Text(
                     '${AppStrings.get('baseline', lang)}: ${_formatPrice(rule.basePrice!)}',
-                    style: const TextStyle(fontSize: 10, color: AppTokens.textMuted),
+                    style: TextStyle(fontSize: 10, color: textMuted),
                   ),
                 ],
                 const Spacer(),
                 if (rule.lastCheckedAt != null)
                   Text(
                     _formatTimeAgo(rule.lastCheckedAt!, lang),
-                    style: const TextStyle(fontSize: 10, color: AppTokens.textMuted),
+                    style: TextStyle(fontSize: 10, color: textMuted),
                   ),
                 const SizedBox(width: 8),
                 InkWell(
@@ -378,9 +388,9 @@ class _WatchlistPageState extends State<WatchlistPage> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                     decoration: BoxDecoration(
-                      color: AppTokens.surfaceElevated,
+                      color: theme.colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: AppTokens.borderSubtle),
+                      border: Border.all(color: theme.dividerColor),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -454,15 +464,6 @@ class _WatchlistPageState extends State<WatchlistPage> {
               onPressed: _openCreateFlow,
               icon: const Icon(Icons.add_rounded),
               label: Text(AppStrings.get('create_first_alert', lang)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: theme.colorScheme.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppTokens.space24,
-                  vertical: AppTokens.space12,
-                ),
-                shape: const RoundedRectangleBorder(borderRadius: AppTokens.borderMedium),
-              ),
             ),
           ],
         ),

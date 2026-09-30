@@ -109,6 +109,7 @@ class BitcoinCheckerApp extends StatelessWidget {
                 debugShowCheckedModeBanner: false,
                 themeMode: isLight ? ThemeMode.light : ThemeMode.dark,
                 theme: settingsService.settings.buildThemeData(),
+                darkTheme: settingsService.settings.buildThemeData(),
                 locale: Locale(isFa ? 'fa' : 'en'),
                 builder: (context, child) {
                   return Directionality(

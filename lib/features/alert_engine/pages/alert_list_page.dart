@@ -12,9 +12,6 @@ import '../models/alert_rule.dart';
 import '../repositories/json_alert_rule_repository.dart';
 import '../widgets/alert_row.dart';
 
-/// Alert Management Screen displaying active and cooling-down rules.
-/// Supports 5-second undo swipe deletion, direct active toggle,
-/// re-arm confirmation dialogs, and rule duplication.
 class AlertListPage extends StatefulWidget {
   const AlertListPage({super.key});
 
@@ -23,7 +20,6 @@ class AlertListPage extends StatefulWidget {
 }
 
 class _AlertListPageState extends State<AlertListPage> {
-  // Pending delete timers for 5-second Undo window
   final Map<String, Timer> _pendingDeleteTimers = {};
   final Set<String> _pendingDeleteUuids = {};
 
@@ -41,7 +37,6 @@ class _AlertListPageState extends State<AlertListPage> {
       _pendingDeleteUuids.add(rule.uuid);
     });
 
-    // Schedule actual commit to Isar after 5 seconds
     _pendingDeleteTimers[rule.uuid] = Timer(const Duration(seconds: 5), () {
       if (mounted && _pendingDeleteUuids.contains(rule.uuid)) {
         context.read<AlertRulesBloc>().add(DeleteAlertRule(rule.uuid));
@@ -50,18 +45,17 @@ class _AlertListPageState extends State<AlertListPage> {
       }
     });
 
-    // Present 5-second Undo Snackbar
+    final theme = Theme.of(context);
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('${S.alertDeleted}: ${rule.baseCurrency}/${rule.counterCurrency}'),
-        backgroundColor: AppTokens.surfaceElevated,
+        backgroundColor: theme.colorScheme.surfaceContainerHighest,
         duration: const Duration(seconds: 5),
         action: SnackBarAction(
           label: S.undo,
-          textColor: AppTokens.primary,
+          textColor: theme.colorScheme.primary,
           onPressed: () {
-            // Cancel scheduled delete timer and restore row
             _pendingDeleteTimers[rule.uuid]?.cancel();
             _pendingDeleteTimers.remove(rule.uuid);
             setState(() {
@@ -74,25 +68,30 @@ class _AlertListPageState extends State<AlertListPage> {
   }
 
   Future<void> _showRearmConfirmation(BuildContext context, AlertRule rule) async {
+    final theme = Theme.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTokens.surface,
-        shape: const RoundedRectangleBorder(borderRadius: AppTokens.borderLarge),
-        title: const Text(S.rearmConfirmTitle, style: AppTokens.sectionHeader),
-        content: const Text(S.rearmConfirmBody, style: AppTokens.bodySecondary),
+        backgroundColor: theme.colorScheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          S.rearmConfirmTitle,
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: theme.colorScheme.onSurface),
+        ),
+        content: Text(
+          S.rearmConfirmBody,
+          style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            style: TextButton.styleFrom(foregroundColor: AppTokens.textSecondary),
-            child: const Text(S.cancel),
+            child: Text(S.cancel, style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(true),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTokens.warning,
-              foregroundColor: AppTokens.background,
-              shape: const RoundedRectangleBorder(borderRadius: AppTokens.borderMedium),
+              foregroundColor: Colors.white,
             ),
             child: const Text(S.rearmNow),
           ),
@@ -109,11 +108,12 @@ class _AlertListPageState extends State<AlertListPage> {
     final repo = context.read<JsonAlertRuleRepository>();
     final duplicated = await repo.duplicateRule(rule.uuid);
     if (duplicated != null && mounted) {
+      final theme = Theme.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(S.alertDuplicated),
-          backgroundColor: AppTokens.surfaceElevated,
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: const Text(S.alertDuplicated),
+          backgroundColor: theme.colorScheme.surfaceContainerHighest,
+          duration: const Duration(seconds: 2),
         ),
       );
     }
@@ -122,23 +122,28 @@ class _AlertListPageState extends State<AlertListPage> {
   void _exportSingleRule(AlertRule rule) {
     final jsonStr = jsonEncode(rule.toJson());
     Clipboard.setData(ClipboardData(text: jsonStr));
+    final theme = Theme.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Rule JSON copied to clipboard'),
-        backgroundColor: AppTokens.surfaceElevated,
-        duration: Duration(seconds: 2),
+      SnackBar(
+        content: const Text('Rule JSON copied to clipboard'),
+        backgroundColor: theme.colorScheme.surfaceContainerHighest,
+        duration: const Duration(seconds: 2),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: AppTokens.background,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppTokens.surface,
+        backgroundColor: theme.colorScheme.surface,
         elevation: 0,
-        title: const Text(S.alertListTitle, style: AppTokens.displayTitle),
+        title: Text(
+          S.alertListTitle,
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: theme.colorScheme.onSurface),
+        ),
       ),
       body: BlocBuilder<AlertRulesBloc, AlertRulesState>(
         builder: (context, state) {
@@ -155,23 +160,27 @@ class _AlertListPageState extends State<AlertListPage> {
                   children: [
                     Container(
                       padding: const EdgeInsets.all(AppTokens.space24),
-                      decoration: const BoxDecoration(
-                        color: AppTokens.surface,
+                      decoration: BoxDecoration(
+                        color: theme.cardColor,
                         shape: BoxShape.circle,
+                        border: Border.all(color: theme.dividerColor),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.notifications_none_rounded,
                         size: 48,
-                        color: AppTokens.textMuted,
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
                       ),
                     ),
                     const SizedBox(height: AppTokens.space16),
-                    const Text(S.noAlertsTitle, style: AppTokens.sectionHeader),
+                    Text(
+                      S.noAlertsTitle,
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                    ),
                     const SizedBox(height: AppTokens.space8),
                     Text(
                       S.noAlertsSubtitle,
                       textAlign: TextAlign.center,
-                      style: AppTokens.bodySecondary.copyWith(height: 1.4),
+                      style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                     ),
                   ],
                 ),
@@ -196,15 +205,7 @@ class _AlertListPageState extends State<AlertListPage> {
                 onSwipeDelete: () => _handleSwipeDelete(rule),
                 onRearm: () => _showRearmConfirmation(context, rule),
                 onDuplicate: () => _duplicateRule(rule),
-                onEdit: () {
-                  // Placeholder: editing will be integrated with the new CreateAlertFlow wizard
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Rule editing will be available in the upcoming wizard.'),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                },
+                onEdit: () {},
                 onExport: () => _exportSingleRule(rule),
               );
             },

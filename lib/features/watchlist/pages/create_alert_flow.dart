@@ -21,8 +21,6 @@ enum MarketFlowType {
   macro,
 }
 
-/// BitcoinChecker-style Professional Alert Creator.
-/// First Step: 2 Big Beautiful Market Cards (Crypto vs US Stocks/Bonds/Forex).
 class CreateAlertFlow extends StatefulWidget {
   final ExchangeRegistry registry;
   final JsonAlertRuleRepository repository;
@@ -66,7 +64,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
   CurrencyPair? _selectedPair;
 
   // Macro Flow State
-  String _macroCategoryFilter = 'all'; // all, bonds, forex, stocks, commodities, indices
+  String _macroCategoryFilter = 'all';
   String _macroSearchQuery = '';
   Map<String, dynamic>? _selectedMacroAsset;
 
@@ -98,45 +96,37 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
       case CheckUnit.seconds:
         return value.clamp(1, 86400);
       case CheckUnit.minutes:
-        return (value * 60).clamp(1, 86400);
+        return (value * 60).clamp(1, 86400 * 7);
       case CheckUnit.hours:
-        return (value * 3600).clamp(1, 86400);
+        return (value * 3600).clamp(1, 86400 * 30);
     }
   }
 
   String _formatCalculatedInterval() {
-    final value = int.tryParse(_unitValueController.text.trim()) ?? 1;
+    final val = int.tryParse(_unitValueController.text.trim()) ?? 1;
     switch (_checkUnit) {
       case CheckUnit.seconds:
-        return '$value ثانیه';
+        return '$val ثانیه';
       case CheckUnit.minutes:
-        return '$value دقیقه';
+        return '$val دقیقه';
       case CheckUnit.hours:
-        return '$value ساعت';
+        return '$val ساعت';
     }
   }
 
-  Future<void> _onExchangeChosen(Exchange exchange) async {
+  void _onExchangeChosen(Exchange exchange) {
     setState(() {
       _selectedExchange = exchange;
       _step = 2;
-      _isLoadingPairs = true;
-      _pairSearchQuery = '';
-      _selectedPair = null;
     });
-
-    await _fetchPairsForSelectedExchange(forceRefresh: false);
+    _fetchPairsForSelectedExchange();
   }
 
   Future<void> _fetchPairsForSelectedExchange({bool forceRefresh = false}) async {
     if (_selectedExchange == null) return;
     setState(() => _isLoadingPairs = true);
-
     try {
-      final pairs = forceRefresh
-          ? await widget.registry.refreshCurrencyPairs(_selectedExchange!.id)
-          : await widget.registry.getCurrencyPairs(_selectedExchange!.id);
-
+      final pairs = await _selectedExchange!.fetchSupportedPairs(forceRefresh: forceRefresh);
       if (mounted) {
         setState(() {
           _exchangePairs = pairs;
@@ -251,7 +241,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
         backgroundColor: theme.colorScheme.surface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
+          icon: Icon(Icons.arrow_back_rounded, color: theme.colorScheme.onSurface),
           onPressed: () {
             if (_step > 1) {
               setState(() => _step--);
@@ -272,73 +262,70 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
         ),
       ),
-      body: _buildCurrentBody(),
+      body: _buildCurrentBody(theme, lang),
     );
   }
 
-  Widget _buildCurrentBody() {
+  Widget _buildCurrentBody(ThemeData theme, String lang) {
     if (_flowType == MarketFlowType.none) {
-      return _buildMarketTypeChooser();
+      return _buildMarketTypeChooser(theme, lang);
     } else if (_flowType == MarketFlowType.crypto) {
-      if (_step == 1) return _buildCryptoExchangePicker();
-      if (_step == 2) return _buildCryptoPairPicker();
-      return _buildConditionAndFrequencyStep();
+      if (_step == 1) return _buildCryptoExchangePicker(theme, lang);
+      if (_step == 2) return _buildCryptoPairPicker(theme, lang);
+      return _buildConditionAndFrequencyStep(theme, lang);
     } else {
-      if (_step == 1) return _buildMacroAssetPicker();
-      return _buildConditionAndFrequencyStep();
+      if (_step == 1) return _buildMacroAssetPicker(theme, lang);
+      return _buildConditionAndFrequencyStep(theme, lang);
     }
   }
 
-  // ==========================================
-  // SCREEN 0: TWO BIG PROMINENT MARKET BUTTONS
-  // ==========================================
-  Widget _buildMarketTypeChooser() {
+  Widget _buildMarketTypeChooser(ThemeData theme, String lang) {
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
       children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           decoration: BoxDecoration(
-            color: AppTokens.primary.withValues(alpha: 0.15),
+            color: theme.colorScheme.primary.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(20),
           ),
-          child: const Row(
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.auto_awesome_rounded, size: 14, color: AppTokens.primary),
-              SizedBox(width: 6),
+              Icon(Icons.auto_awesome_rounded, size: 14, color: theme.colorScheme.primary),
+              const SizedBox(width: 6),
               Text(
                 'گام نخست: انتخاب نوع بازار',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTokens.primary),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
               ),
             ],
           ),
         ),
         const SizedBox(height: 12),
-        const Text(
-          'مایلید برای کدام بازار هشدار تنظیم کنید؟',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white),
+        Text(
+          AppStrings.get('choose_market_title', lang),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: theme.colorScheme.onSurface),
         ),
         const SizedBox(height: 6),
-        const Text(
-          'نوع بازار و دارایی مورد نظر خود را برای پایش دقیق قیمت انتخاب نمایید.',
-          style: TextStyle(fontSize: 12, color: AppTokens.textSecondary),
+        Text(
+          AppStrings.get('choose_market_desc', lang),
+          style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.65)),
         ),
         const SizedBox(height: 24),
 
-        // CARD 1: CRYPTO MARKET (⚡ بازار رمزارزها)
+        // CARD 1: CRYPTO MARKET
         _buildMarketCard(
+          theme: theme,
           icon: Icons.bolt_rounded,
-          iconBg: const Color(0xFF10B981).withValues(alpha: 0.15),
-          iconColor: const Color(0xFF10B981),
-          borderColor: const Color(0xFF10B981).withValues(alpha: 0.4),
-          badgeText: 'بیش از ۴۰ صرافی معتبر',
-          title: '⚡ بازار رمزارزها (کریپتو)',
-          description:
-              'بیش از ۴۰ صرافی معتبر بین‌المللی و ایرانی با چیپ‌های فیلتر، استخراج جفت‌ارزها و دکمه بروزرسانی',
+          iconBg: theme.colorScheme.primary.withValues(alpha: 0.15),
+          iconColor: theme.colorScheme.primary,
+          borderColor: theme.colorScheme.primary.withValues(alpha: 0.35),
+          badgeText: AppStrings.get('crypto_market_badge', lang),
+          title: AppStrings.get('crypto_market_title', lang),
+          description: AppStrings.get('crypto_market_desc', lang),
           tags: ['بایننس', 'نوبیتکس', 'کوکوین', 'والکس', 'CoinGecko'],
-          buttonText: 'ورود به بخش صرافی‌های کریپتو ←',
-          buttonColor: const Color(0xFF10B981),
+          buttonText: AppStrings.get('crypto_market_cta', lang),
+          buttonColor: theme.colorScheme.primary,
           onTap: () {
             setState(() {
               _flowType = MarketFlowType.crypto;
@@ -349,19 +336,19 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
 
         const SizedBox(height: 18),
 
-        // CARD 2: US STOCKS, BONDS & FOREX (🏛️ سهام، اوراق قرضه آمریکا و فارکس)
+        // CARD 2: US STOCKS, BONDS & FOREX
         _buildMarketCard(
+          theme: theme,
           icon: Icons.account_balance_rounded,
-          iconBg: const Color(0xFF3B82F6).withValues(alpha: 0.15),
-          iconColor: const Color(0xFF3B82F6),
-          borderColor: const Color(0xFF3B82F6).withValues(alpha: 0.4),
-          badgeText: 'وال استریت و اقتصاد کلان',
-          title: '🏛️ سهام، اوراق قرضه آمریکا و فارکس',
-          description:
-              'اوراق قرضه ۱۰ ساله آمریکا (US10Y)، جفت‌ارزهای فارکس، سهام‌های نزدک/نیویورک، طلا و شاخص‌ها',
+          iconBg: theme.colorScheme.secondary.withValues(alpha: 0.15),
+          iconColor: theme.colorScheme.secondary,
+          borderColor: theme.colorScheme.secondary.withValues(alpha: 0.35),
+          badgeText: AppStrings.get('macro_market_badge', lang),
+          title: AppStrings.get('macro_market_title', lang),
+          description: AppStrings.get('macro_market_desc', lang),
           tags: ['اوراق US10Y', 'یورو/دلار', 'سهام انویدیا و اپل', 'انس طلا'],
-          buttonText: 'ورود به بازارهای جهانی ←',
-          buttonColor: const Color(0xFF3B82F6),
+          buttonText: AppStrings.get('macro_market_cta', lang),
+          buttonColor: theme.colorScheme.secondary,
           onTap: () {
             setState(() {
               _flowType = MarketFlowType.macro;
@@ -374,6 +361,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
   }
 
   Widget _buildMarketCard({
+    required ThemeData theme,
     required IconData icon,
     required Color iconBg,
     required Color iconColor,
@@ -392,13 +380,13 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
+          color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: borderColor, width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: buttonColor.withValues(alpha: 0.1),
-              blurRadius: 16,
+              color: buttonColor.withValues(alpha: 0.08),
+              blurRadius: 14,
               offset: const Offset(0, 4),
             ),
           ],
@@ -422,9 +410,9 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppTokens.surfaceElevated,
+                    color: theme.colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppTokens.borderSubtle),
+                    border: Border.all(color: theme.dividerColor),
                   ),
                   child: Text(
                     badgeText,
@@ -436,12 +424,12 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
             const SizedBox(height: 14),
             Text(
               title,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: theme.colorScheme.onSurface),
             ),
             const SizedBox(height: 8),
             Text(
               description,
-              style: const TextStyle(fontSize: 12, color: AppTokens.textSecondary, height: 1.5),
+              style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.7), height: 1.5),
             ),
             const SizedBox(height: 14),
             Wrap(
@@ -451,10 +439,14 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                   .map((t) => Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
-                          color: AppTokens.surfaceElevated,
+                          color: theme.colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: theme.dividerColor.withValues(alpha: 0.5)),
                         ),
-                        child: Text(t, style: const TextStyle(fontSize: 10, color: AppTokens.textMuted)),
+                        child: Text(
+                          t,
+                          style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurface.withValues(alpha: 0.65)),
+                        ),
                       ))
                   .toList(),
             ),
@@ -479,10 +471,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
     );
   }
 
-  // ==========================================
-  // CRYPTO FLOW: STEP 1 (EXCHANGES LIST)
-  // ==========================================
-  Widget _buildCryptoExchangePicker() {
+  Widget _buildCryptoExchangePicker(ThemeData theme, String lang) {
     final allExchanges = widget.registry.getAll();
     final filtered = allExchanges.where((ex) {
       if (_selectedCategory != ExchangeCategory.all && ex.category != _selectedCategory) {
@@ -501,14 +490,14 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
           child: TextField(
             onChanged: (val) => setState(() => _exchangeSearchQuery = val),
-            style: const TextStyle(fontSize: 13),
+            style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurface),
             decoration: InputDecoration(
-              hintText: 'جستجوی صرافی (Binance, Nobitex, Wallex, KuCoin, OKX)...',
-              prefixIcon: const Icon(Icons.search, size: 20, color: AppTokens.textMuted),
+              hintText: AppStrings.get('search_exchange_hint', lang),
+              prefixIcon: Icon(Icons.search, size: 20, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
               filled: true,
-              fillColor: Theme.of(context).colorScheme.surface,
+              fillColor: theme.colorScheme.surface,
               contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.dividerColor)),
             ),
           ),
         ),
@@ -528,11 +517,11 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                   labelStyle: TextStyle(
                     fontSize: 11,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                    color: isSelected ? AppTokens.primary : AppTokens.textSecondary,
+                    color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
-                  selectedColor: AppTokens.primary.withValues(alpha: 0.15),
-                  backgroundColor: Theme.of(context).colorScheme.surface,
-                  side: BorderSide(color: isSelected ? AppTokens.primary : AppTokens.borderSubtle),
+                  selectedColor: theme.colorScheme.primary.withValues(alpha: 0.15),
+                  backgroundColor: theme.colorScheme.surface,
+                  side: BorderSide(color: isSelected ? theme.colorScheme.primary : theme.dividerColor),
                   onSelected: (_) => setState(() => _selectedCategory = cat),
                 ),
               );
@@ -553,9 +542,9 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
+                    color: theme.colorScheme.surface,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppTokens.borderSubtle),
+                    border: Border.all(color: theme.dividerColor),
                   ),
                   child: Row(
                     children: [
@@ -563,13 +552,13 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                         width: 36,
                         height: 36,
                         decoration: BoxDecoration(
-                          color: AppTokens.primary.withValues(alpha: 0.1),
+                          color: theme.colorScheme.primary.withValues(alpha: 0.12),
                           shape: BoxShape.circle,
                         ),
                         alignment: Alignment.center,
                         child: Text(
                           ex.name.substring(0, 1).toUpperCase(),
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: AppTokens.primary),
+                          style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -577,14 +566,16 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(ex.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            Text(ex.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface)),
                             const SizedBox(height: 2),
-                            Text('${ex.countryBadge} · جفت‌ارز مبنا: ${ex.defaultCounterCurrency}',
-                                style: const TextStyle(fontSize: 11, color: AppTokens.textMuted)),
+                            Text(
+                              '${ex.countryBadge} · جفت‌ارز مبنا: ${ex.defaultCounterCurrency}',
+                              style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.55)),
+                            ),
                           ],
                         ),
                       ),
-                      const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppTokens.textMuted),
+                      Icon(Icons.arrow_forward_ios_rounded, size: 14, color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
                     ],
                   ),
                 ),
@@ -596,10 +587,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
     );
   }
 
-  // ==========================================
-  // CRYPTO FLOW: STEP 2 (PAIRS LIST)
-  // ==========================================
-  Widget _buildCryptoPairPicker() {
+  Widget _buildCryptoPairPicker(ThemeData theme, String lang) {
     final filtered = _exchangePairs.where((p) {
       final q = _pairSearchQuery.trim().toUpperCase();
       if (q.isEmpty) return true;
@@ -610,15 +598,14 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
 
     return Column(
       children: [
-        // Header with sync button
         Padding(
           padding: const EdgeInsets.all(16),
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
+              color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppTokens.borderSubtle),
+              border: Border.all(color: theme.dividerColor),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -626,18 +613,18 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                 Expanded(
                   child: Text(
                     'صرافی: ${_selectedExchange?.name} (${_exchangePairs.length} جفت‌ارز)',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: theme.colorScheme.onSurface),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 ElevatedButton.icon(
                   onPressed: _isLoadingPairs ? null : () => _fetchPairsForSelectedExchange(forceRefresh: true),
                   icon: _isLoadingPairs
-                      ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2))
+                      ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                       : const Icon(Icons.sync_rounded, size: 14),
-                  label: const Text('بروزرسانی لیست', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                  label: Text(AppStrings.get('refresh_list', lang), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTokens.primary,
+                    backgroundColor: theme.colorScheme.primary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   ),
@@ -651,14 +638,14 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: TextField(
             onChanged: (val) => setState(() => _pairSearchQuery = val),
-            style: const TextStyle(fontSize: 13),
+            style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurface),
             decoration: InputDecoration(
-              hintText: 'جستجوی رمزارز (BTC, ETH, SOL, POL, DOGE, PEPE)...',
-              prefixIcon: const Icon(Icons.search, size: 20, color: AppTokens.textMuted),
+              hintText: AppStrings.get('search_crypto_hint', lang),
+              prefixIcon: Icon(Icons.search, size: 20, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
               filled: true,
-              fillColor: Theme.of(context).colorScheme.surface,
+              fillColor: theme.colorScheme.surface,
               contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.dividerColor)),
             ),
           ),
         ),
@@ -666,7 +653,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
 
         Expanded(
           child: _isLoadingPairs
-              ? const Center(child: CircularProgressIndicator())
+              ? Center(child: CircularProgressIndicator(color: theme.colorScheme.primary))
               : ListView.separated(
                   padding: const EdgeInsets.all(16),
                   itemCount: filtered.length,
@@ -679,9 +666,9 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surface,
+                          color: theme.colorScheme.surface,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: AppTokens.borderSubtle),
+                          border: Border.all(color: theme.dividerColor),
                         ),
                         child: Row(
                           children: [
@@ -690,12 +677,12 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                             Expanded(
                               child: Text(
                                 pair.displayName,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
                               ),
                             ),
-                            const Text(
-                              'انتخاب →',
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTokens.primary),
+                            Text(
+                              AppStrings.get('select_cta', lang),
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
                             ),
                           ],
                         ),
@@ -708,10 +695,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
     );
   }
 
-  // ==========================================
-  // MACRO FLOW: STEP 1 (BONDS, FOREX, STOCKS)
-  // ==========================================
-  Widget _buildMacroAssetPicker() {
+  Widget _buildMacroAssetPicker(ThemeData theme, String lang) {
     final allAssets = GlobalStocksExchange.predefinedStocks;
     final filtered = allAssets.where((a) {
       if (_macroCategoryFilter != 'all') {
@@ -735,14 +719,14 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
           child: TextField(
             onChanged: (val) => setState(() => _macroSearchQuery = val),
-            style: const TextStyle(fontSize: 13),
+            style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurface),
             decoration: InputDecoration(
-              hintText: 'جستجوی نماد (US10Y, EUR/USD, NVDA, طلا, S&P 500)...',
-              prefixIcon: const Icon(Icons.search, size: 20, color: AppTokens.textMuted),
+              hintText: AppStrings.get('search_macro_hint', lang),
+              prefixIcon: Icon(Icons.search, size: 20, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
               filled: true,
-              fillColor: Theme.of(context).colorScheme.surface,
+              fillColor: theme.colorScheme.surface,
               contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.dividerColor)),
             ),
           ),
         ),
@@ -753,33 +737,13 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             children: [
-              {'id': 'all', 'label': '🌐 همه'},
-              {'id': 'bonds', 'label': '🏛️ اوراق قرضه آمریکا'},
-              {'id': 'forex', 'label': '💱 فارکس'},
-              {'id': 'metals', 'label': '🪙 طلا و کالاها'},
-              {'id': 'stocks', 'label': '📈 سهام‌های برتر آمریکا'},
-              {'id': 'index', 'label': '📊 شاخص‌های جهانی'},
-            ].map((cat) {
-              final isSelected = _macroCategoryFilter == cat['id'];
-              return Padding(
-                padding: const EdgeInsets.only(right: 6, bottom: 6),
-                child: FilterChip(
-                  selected: isSelected,
-                  label: Text(cat['label']!),
-                  labelStyle: TextStyle(
-                    fontSize: 11,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                    color: isSelected ? const Color(0xFF3B82F6) : AppTokens.textSecondary,
-                  ),
-                  selectedColor: const Color(0xFF3B82F6).withValues(alpha: 0.15),
-                  backgroundColor: Theme.of(context).colorScheme.surface,
-                  side: BorderSide(
-                    color: isSelected ? const Color(0xFF3B82F6) : AppTokens.borderSubtle,
-                  ),
-                  onSelected: (_) => setState(() => _macroCategoryFilter = cat['id']!),
-                ),
-              );
-            }).toList(),
+              _buildMacroChip('همه نمادها', 'all', theme),
+              _buildMacroChip('🏛️ اوراق قرضه آمریکا', 'bonds', theme),
+              _buildMacroChip('💱 فارکس (ارزها)', 'forex', theme),
+              _buildMacroChip('🥇 طلا و فلزات', 'metals', theme),
+              _buildMacroChip('📈 سهام وال‌استریت', 'stocks', theme),
+              _buildMacroChip('🌐 شاخص‌های جهانی', 'index', theme),
+            ],
           ),
         ),
 
@@ -797,9 +761,9 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
+                    color: theme.colorScheme.surface,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppTokens.borderSubtle),
+                    border: Border.all(color: theme.dividerColor),
                   ),
                   child: Row(
                     children: [
@@ -807,22 +771,26 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                         width: 36,
                         height: 36,
                         decoration: BoxDecoration(
-                          color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
+                          color: theme.colorScheme.secondary.withValues(alpha: 0.15),
                           shape: BoxShape.circle,
                         ),
                         alignment: Alignment.center,
-                        child: const Icon(Icons.show_chart_rounded, color: Color(0xFF3B82F6), size: 20),
+                        child: Icon(Icons.show_chart_rounded, color: theme.colorScheme.secondary, size: 20),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(asset['nameFa'] as String,
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            Text(
+                              asset['nameFa'] as String,
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
+                            ),
                             const SizedBox(height: 2),
-                            Text('${asset['symbol']} · دسته: ${asset['cat']}',
-                                style: const TextStyle(fontSize: 11, color: AppTokens.textMuted)),
+                            Text(
+                              '${asset['symbol']} · دسته: ${asset['cat']}',
+                              style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.55)),
+                            ),
                           ],
                         ),
                       ),
@@ -831,11 +799,16 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                         children: [
                           Text(
                             '\$${price.toStringAsFixed(price < 5 ? 4 : 2)}',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, fontFamily: 'monospace'),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              fontFamily: 'monospace',
+                              color: theme.colorScheme.onSurface,
+                            ),
                           ),
-                          const Text(
-                            'انتخاب →',
-                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF3B82F6)),
+                          Text(
+                            AppStrings.get('select_cta', lang),
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: theme.colorScheme.secondary),
                           ),
                         ],
                       ),
@@ -850,10 +823,27 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
     );
   }
 
-  // ==========================================
-  // FINAL STEP: FREQUENCY & CONDITION SETTINGS
-  // ==========================================
-  Widget _buildConditionAndFrequencyStep() {
+  Widget _buildMacroChip(String label, String catKey, ThemeData theme) {
+    final isSelected = _macroCategoryFilter == catKey;
+    return Padding(
+      padding: const EdgeInsets.only(right: 6, bottom: 6),
+      child: FilterChip(
+        selected: isSelected,
+        label: Text(label),
+        labelStyle: TextStyle(
+          fontSize: 11,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          color: isSelected ? theme.colorScheme.secondary : theme.colorScheme.onSurface.withValues(alpha: 0.7),
+        ),
+        selectedColor: theme.colorScheme.secondary.withValues(alpha: 0.15),
+        backgroundColor: theme.colorScheme.surface,
+        side: BorderSide(color: isSelected ? theme.colorScheme.secondary : theme.dividerColor),
+        onSelected: (_) => setState(() => _macroCategoryFilter = catKey),
+      ),
+    );
+  }
+
+  Widget _buildConditionAndFrequencyStep(ThemeData theme, String lang) {
     final assetName = _flowType == MarketFlowType.crypto
         ? _selectedPair?.displayName ?? ''
         : _selectedMacroAsset?['nameFa'] ?? '';
@@ -861,31 +851,41 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        // Target asset header badge
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
+            color: theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppTokens.borderSubtle),
+            border: Border.all(color: theme.dividerColor),
           ),
           child: Row(
             children: [
-              const Icon(Icons.check_circle_rounded, color: AppTokens.primary, size: 22),
+              Icon(Icons.check_circle_rounded, color: theme.colorScheme.primary, size: 22),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('دارایی انتخاب‌شده:', style: TextStyle(fontSize: 11, color: AppTokens.textMuted)),
-                    Text(assetName, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                    Text(
+                      AppStrings.get('selected_asset', lang),
+                      style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.55)),
+                    ),
+                    Text(
+                      assetName,
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                    ),
                   ],
                 ),
               ),
               if (_currentPrice != null)
                 Text(
                   '\$${_currentPrice!.toStringAsFixed(2)}',
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, fontFamily: 'monospace'),
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    fontFamily: 'monospace',
+                    color: theme.colorScheme.primary,
+                  ),
                 ),
             ],
           ),
@@ -893,7 +893,10 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
         const SizedBox(height: 20),
 
         // 1. FREQUENCY SECTION
-        const Text('۱. زمان‌بندی بررسی خودکار:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+        Text(
+          AppStrings.get('auto_check_schedule', lang),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
+        ),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -902,12 +905,12 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
               child: TextField(
                 controller: _unitValueController,
                 keyboardType: TextInputType.number,
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                 decoration: InputDecoration(
-                  labelText: 'تعداد واحد',
+                  labelText: AppStrings.get('unit_count', lang),
                   filled: true,
-                  fillColor: Theme.of(context).colorScheme.surface,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  fillColor: theme.colorScheme.surface,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.dividerColor)),
                 ),
                 onChanged: (_) => setState(() {}),
               ),
@@ -918,15 +921,15 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
               child: DropdownButtonFormField<CheckUnit>(
                 value: _checkUnit,
                 decoration: InputDecoration(
-                  labelText: 'واحد زمان',
+                  labelText: AppStrings.get('time_unit', lang),
                   filled: true,
-                  fillColor: Theme.of(context).colorScheme.surface,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  fillColor: theme.colorScheme.surface,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.dividerColor)),
                 ),
-                items: const [
-                  DropdownMenuItem(value: CheckUnit.seconds, child: Text('ثانیه')),
-                  DropdownMenuItem(value: CheckUnit.minutes, child: Text('دقیقه')),
-                  DropdownMenuItem(value: CheckUnit.hours, child: Text('ساعت')),
+                items: [
+                  DropdownMenuItem(value: CheckUnit.seconds, child: Text(AppStrings.get('seconds', lang))),
+                  DropdownMenuItem(value: CheckUnit.minutes, child: Text(AppStrings.get('minutes', lang))),
+                  DropdownMenuItem(value: CheckUnit.hours, child: Text(AppStrings.get('hours', lang))),
                 ],
                 onChanged: (val) {
                   if (val != null) setState(() => _checkUnit = val);
@@ -938,12 +941,15 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
         const SizedBox(height: 8),
         Text(
           '⏱️ بررسی قیمت هر ${_formatCalculatedInterval()} یک‌بار در پس‌زمینه انجام خواهد شد.',
-          style: const TextStyle(fontSize: 11, color: AppTokens.primary, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 11, color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 20),
 
         // 2. CONDITION TYPE
-        const Text('۲. نوع شرط هشدار:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+        Text(
+          AppStrings.get('condition_type', lang),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
+        ),
         const SizedBox(height: 8),
         Row(
           children: [
@@ -955,24 +961,24 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   decoration: BoxDecoration(
                     color: _conditionType == AlertConditionType.percentChange
-                        ? AppTokens.primary.withValues(alpha: 0.15)
-                        : Theme.of(context).colorScheme.surface,
+                        ? theme.colorScheme.primary.withValues(alpha: 0.15)
+                        : theme.colorScheme.surface,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: _conditionType == AlertConditionType.percentChange
-                          ? AppTokens.primary
-                          : AppTokens.borderSubtle,
+                          ? theme.colorScheme.primary
+                          : theme.dividerColor,
                     ),
                   ),
                   alignment: Alignment.center,
                   child: Text(
-                    'درصد تغییر (%)',
+                    AppStrings.get('percent_change', lang),
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
                       color: _conditionType == AlertConditionType.percentChange
-                          ? AppTokens.primary
-                          : AppTokens.textSecondary,
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
                 ),
@@ -987,24 +993,24 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   decoration: BoxDecoration(
                     color: _conditionType == AlertConditionType.priceThreshold
-                        ? AppTokens.primary.withValues(alpha: 0.15)
-                        : Theme.of(context).colorScheme.surface,
+                        ? theme.colorScheme.primary.withValues(alpha: 0.15)
+                        : theme.colorScheme.surface,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: _conditionType == AlertConditionType.priceThreshold
-                          ? AppTokens.primary
-                          : AppTokens.borderSubtle,
+                          ? theme.colorScheme.primary
+                          : theme.dividerColor,
                     ),
                   ),
                   alignment: Alignment.center,
                   child: Text(
-                    r'قیمت هدف ($)',
+                    AppStrings.get('price_target', lang),
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 12,
                       color: _conditionType == AlertConditionType.priceThreshold
-                          ? AppTokens.primary
-                          : AppTokens.textSecondary,
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
                 ),
@@ -1015,53 +1021,59 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
         const SizedBox(height: 16),
 
         if (_conditionType == AlertConditionType.percentChange) ...[
-          const Text('جهت نوسان قیمت:', style: TextStyle(fontSize: 12, color: AppTokens.textSecondary)),
+          Text(
+            AppStrings.get('price_direction', lang),
+            style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
+          ),
           const SizedBox(height: 6),
           Row(
             children: [
-              _buildDirectionChip('± هر دو طرف', AlertDirection.bothSides),
+              _buildDirectionChip(AppStrings.get('both_ways', lang), AlertDirection.bothSides, theme),
               const SizedBox(width: 8),
-              _buildDirectionChip('▲ فقط افزایش', AlertDirection.above),
+              _buildDirectionChip(AppStrings.get('above_only', lang), AlertDirection.above, theme),
               const SizedBox(width: 8),
-              _buildDirectionChip('▼ فقط کاهش', AlertDirection.below),
+              _buildDirectionChip(AppStrings.get('below_only', lang), AlertDirection.below, theme),
             ],
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _percentController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'monospace'),
+            style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'monospace', color: theme.colorScheme.onSurface),
             decoration: InputDecoration(
-              labelText: 'درصد نوسان مد نظر (%)',
+              labelText: AppStrings.get('percent_label', lang),
               hintText: 'مثال: 2.5',
               filled: true,
-              fillColor: Theme.of(context).colorScheme.surface,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              fillColor: theme.colorScheme.surface,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.dividerColor)),
             ),
           ),
         ],
 
         if (_conditionType == AlertConditionType.priceThreshold) ...[
-          const Text('جهت عبور قیمت:', style: TextStyle(fontSize: 12, color: AppTokens.textSecondary)),
+          Text(
+            AppStrings.get('price_direction', lang),
+            style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
+          ),
           const SizedBox(height: 6),
           Row(
             children: [
-              _buildDirectionChip('▲ بالاتر از هدف', AlertDirection.above),
+              _buildDirectionChip(AppStrings.get('above_only', lang), AlertDirection.above, theme),
               const SizedBox(width: 8),
-              _buildDirectionChip('▼ پایین‌تر از هدف', AlertDirection.below),
+              _buildDirectionChip(AppStrings.get('below_only', lang), AlertDirection.below, theme),
             ],
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _targetPriceController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'monospace'),
+            style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'monospace', color: theme.colorScheme.onSurface),
             decoration: InputDecoration(
-              labelText: 'قیمت هدف (دلار)',
+              labelText: AppStrings.get('target_price_label', lang),
               hintText: 'مثال: 95000',
               filled: true,
-              fillColor: Theme.of(context).colorScheme.surface,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              fillColor: theme.colorScheme.surface,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.dividerColor)),
             ),
           ),
         ],
@@ -1073,19 +1085,22 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
           child: ElevatedButton(
             onPressed: _saveAlert,
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTokens.primary,
+              backgroundColor: theme.colorScheme.primary,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('ذخیره و شروع بررسی هشدار', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            child: Text(
+              AppStrings.get('save_alert_cta', lang),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildDirectionChip(String label, AlertDirection dir) {
+  Widget _buildDirectionChip(String label, AlertDirection dir, ThemeData theme) {
     final isSelected = _direction == dir;
     return Expanded(
       child: InkWell(
@@ -1094,9 +1109,9 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? AppTokens.primary : Theme.of(context).colorScheme.surface,
+            color: isSelected ? theme.colorScheme.primary : theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: isSelected ? AppTokens.primary : AppTokens.borderSubtle),
+            border: Border.all(color: isSelected ? theme.colorScheme.primary : theme.dividerColor),
           ),
           alignment: Alignment.center,
           child: Text(
@@ -1104,7 +1119,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.bold,
-              color: isSelected ? Colors.white : AppTokens.textSecondary,
+              color: isSelected ? Colors.white : theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
         ),

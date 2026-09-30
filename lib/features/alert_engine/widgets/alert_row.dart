@@ -29,6 +29,7 @@ class AlertRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final conditionDescription = _buildConditionDescription(rule);
 
     return Dismissible(
@@ -37,13 +38,13 @@ class AlertRow extends StatelessWidget {
       background: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: AppTokens.space24),
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           color: AppTokens.negative,
-          borderRadius: AppTokens.borderMedium,
+          borderRadius: BorderRadius.circular(12),
         ),
         child: const Icon(
           Icons.delete_sweep_rounded,
-          color: AppTokens.textPrimary,
+          color: Colors.white,
           size: 26,
         ),
       ),
@@ -57,12 +58,12 @@ class AlertRow extends StatelessWidget {
           ),
           padding: const EdgeInsets.all(AppTokens.space16),
           decoration: BoxDecoration(
-            color: rule.isActive ? AppTokens.surface : AppTokens.surface.withValues(alpha: 0.5),
-            borderRadius: AppTokens.borderMedium,
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: rule.isInCooldown
-                  ? AppTokens.warning.withValues(alpha: 0.4)
-                  : (rule.isActive ? AppTokens.borderSubtle : AppTokens.borderSubtle.withValues(alpha: 0.3)),
+                  ? AppTokens.warning.withValues(alpha: 0.5)
+                  : theme.dividerColor,
             ),
           ),
           child: Column(
@@ -73,8 +74,12 @@ class AlertRow extends StatelessWidget {
                 children: [
                   Text(
                     '${rule.baseCurrency} / ${rule.counterCurrency}',
-                    style: AppTokens.sectionHeader.copyWith(
-                      color: rule.isActive ? AppTokens.textPrimary : AppTokens.textMuted,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: rule.isActive
+                          ? theme.colorScheme.onSurface
+                          : theme.colorScheme.onSurface.withValues(alpha: 0.45),
                     ),
                   ),
                   const SizedBox(width: AppTokens.space8),
@@ -83,49 +88,27 @@ class AlertRow extends StatelessWidget {
                       horizontal: AppTokens.space6,
                       vertical: 1.5,
                     ),
-                    decoration: const BoxDecoration(
-                      color: AppTokens.surfaceElevated,
-                      borderRadius: AppTokens.borderSmall,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: theme.dividerColor),
                     ),
                     child: Text(
                       rule.exchangeId.toUpperCase(),
-                      style: AppTokens.caption.copyWith(
-                        color: AppTokens.secondary,
+                      style: TextStyle(
+                        color: theme.colorScheme.primary,
                         fontSize: 10,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                  if (rule.logicOperator != null) ...[
-                    const SizedBox(width: AppTokens.space6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppTokens.space6,
-                        vertical: 1.5,
-                      ),
-                      decoration: const BoxDecoration(
-                        color: AppTokens.accentSubtle,
-                        borderRadius: AppTokens.borderSmall,
-                      ),
-                      child: Text(
-                        rule.logicOperator!.name.toUpperCase(),
-                        style: AppTokens.caption.copyWith(
-                          color: AppTokens.accent,
-                          fontSize: 10,
-                        ),
-                      ),
-                    ),
-                  ],
                   const Spacer(),
-
-                  // Direct Active / Pause Toggle (No confirmation dialog needed)
                   Transform.scale(
                     scale: 0.8,
                     child: Switch(
                       value: rule.isActive,
-                      activeThumbColor: AppTokens.primary,
-                      activeTrackColor: AppTokens.primarySubtle,
-                      inactiveThumbColor: AppTokens.textMuted,
-                      inactiveTrackColor: AppTokens.surfaceElevated,
+                      activeThumbColor: Colors.white,
+                      activeTrackColor: theme.colorScheme.primary,
                       onChanged: onToggle,
                     ),
                   ),
@@ -137,9 +120,13 @@ class AlertRow extends StatelessWidget {
               // Condition description
               Text(
                 conditionDescription,
-                style: AppTokens.monoNumbers.copyWith(
-                  fontSize: 13,
-                  color: rule.isActive ? AppTokens.textSecondary : AppTokens.textMuted,
+                style: TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: rule.isActive
+                      ? theme.colorScheme.onSurface.withValues(alpha: 0.8)
+                      : theme.colorScheme.onSurface.withValues(alpha: 0.4),
                 ),
               ),
 
@@ -150,21 +137,20 @@ class AlertRow extends StatelessWidget {
                 children: [
                   Text(
                     'Triggers: ${rule.triggerCount}',
-                    style: AppTokens.caption,
+                    style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
                   ),
                   if (rule.lastTriggeredAt != null) ...[
                     const SizedBox(width: AppTokens.space8),
-                    const Text('·', style: AppTokens.caption),
+                    Text('·', style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
                     const SizedBox(width: AppTokens.space8),
                     Text(
                       'Last: ${_formatTime(rule.lastTriggeredAt!)}',
-                      style: AppTokens.caption,
+                      style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
                     ),
                   ],
                 ],
               ),
 
-              // Independent Cooldown Timer (rendered ONLY when currently cooling down)
               if (rule.isInCooldown && rule.cooldownUntil != null)
                 CooldownTimer(
                   cooldownUntil: rule.cooldownUntil!,
@@ -178,6 +164,7 @@ class AlertRow extends StatelessWidget {
   }
 
   void _showContextMenu(BuildContext context, Offset position) {
+    final theme = Theme.of(context);
     showMenu<String>(
       context: context,
       position: RelativeRect.fromLTRB(
@@ -186,16 +173,19 @@ class AlertRow extends StatelessWidget {
         position.dx + 1,
         position.dy + 1,
       ),
-      color: AppTokens.surfaceElevated,
-      shape: const RoundedRectangleBorder(borderRadius: AppTokens.borderMedium),
-      items: const [
+      color: theme.colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: theme.dividerColor),
+      ),
+      items: [
         PopupMenuItem(
           value: 'duplicate',
           child: Row(
             children: [
-              Icon(Icons.copy_rounded, size: 18, color: AppTokens.textSecondary),
-              SizedBox(width: AppTokens.space12),
-              Text(S.duplicateAlert, style: AppTokens.body),
+              Icon(Icons.copy_rounded, size: 18, color: theme.colorScheme.primary),
+              const SizedBox(width: AppTokens.space12),
+              Text(S.duplicateAlert, style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 13)),
             ],
           ),
         ),
@@ -203,9 +193,9 @@ class AlertRow extends StatelessWidget {
           value: 'edit',
           child: Row(
             children: [
-              Icon(Icons.edit_rounded, size: 18, color: AppTokens.textSecondary),
-              SizedBox(width: AppTokens.space12),
-              Text(S.editAlert, style: AppTokens.body),
+              Icon(Icons.edit_rounded, size: 18, color: theme.colorScheme.primary),
+              const SizedBox(width: AppTokens.space12),
+              Text(S.editAlert, style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 13)),
             ],
           ),
         ),
@@ -213,9 +203,9 @@ class AlertRow extends StatelessWidget {
           value: 'export',
           child: Row(
             children: [
-              Icon(Icons.ios_share_rounded, size: 18, color: AppTokens.textSecondary),
-              SizedBox(width: AppTokens.space12),
-              Text(S.exportAlert, style: AppTokens.body),
+              Icon(Icons.ios_share_rounded, size: 18, color: theme.colorScheme.primary),
+              const SizedBox(width: AppTokens.space12),
+              Text(S.exportAlert, style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 13)),
             ],
           ),
         ),

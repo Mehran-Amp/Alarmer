@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:provider/provider.dart';
 import '../../core/localization/app_strings.dart';
-import '../../core/theme/tokens.dart';
 import '../../features/notifications/pages/notification_history_page.dart';
 import '../../features/settings/pages/settings_page.dart';
 import '../../features/settings/services/settings_service.dart';
@@ -19,7 +18,6 @@ class AppShell extends StatefulWidget {
 }
 
 class _AppShellState extends State<AppShell> {
-  // Alerts tab in the middle (index 1) is default
   int _currentIndex = 1;
 
   final List<Widget> _pages = const [
@@ -33,6 +31,7 @@ class _AppShellState extends State<AppShell> {
     final settingsService = context.watch<SettingsService>();
     final lang = settingsService.settings.language;
     final theme = Theme.of(context);
+    final unselectedColor = theme.colorScheme.onSurface.withValues(alpha: 0.55);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -43,15 +42,15 @@ class _AppShellState extends State<AppShell> {
       bottomNavigationBar: Container(
         height: 72,
         decoration: BoxDecoration(
-          color: theme.colorScheme.surface.withValues(alpha: 0.95),
-          border: const Border(
-            top: BorderSide(color: AppTokens.borderSubtle, width: 1.5),
+          color: theme.colorScheme.surface,
+          border: Border(
+            top: BorderSide(color: theme.dividerColor, width: 1.0),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
-              blurRadius: 16,
-              offset: const Offset(0, -4),
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, -3),
             ),
           ],
         ),
@@ -65,12 +64,16 @@ class _AppShellState extends State<AppShell> {
               activeIcon: Icons.notifications_active_rounded,
               label: AppStrings.get('history', lang),
               activeColor: theme.colorScheme.primary,
+              unselectedColor: unselectedColor,
             ),
 
-            // 2. Middle Floating Alerts Tab (Default & Prominent)
+            // 2. Middle Floating Alerts Tab
             _buildCenterAlertsButton(
               label: AppStrings.get('my_alerts', lang),
               primaryColor: theme.colorScheme.primary,
+              surfaceElevated: theme.colorScheme.surfaceContainerHighest,
+              borderColor: theme.dividerColor,
+              unselectedColor: unselectedColor,
             ),
 
             // 3. Settings Tab
@@ -80,6 +83,7 @@ class _AppShellState extends State<AppShell> {
               activeIcon: Icons.settings_rounded,
               label: AppStrings.get('settings', lang),
               activeColor: theme.colorScheme.primary,
+              unselectedColor: unselectedColor,
             ),
           ],
         ),
@@ -93,6 +97,7 @@ class _AppShellState extends State<AppShell> {
     required IconData activeIcon,
     required String label,
     required Color activeColor,
+    required Color unselectedColor,
   }) {
     final isSelected = _currentIndex == index;
     return InkWell(
@@ -106,7 +111,7 @@ class _AppShellState extends State<AppShell> {
             Icon(
               isSelected ? activeIcon : icon,
               size: 24,
-              color: isSelected ? activeColor : AppTokens.textSecondary,
+              color: isSelected ? activeColor : unselectedColor,
             ),
             const SizedBox(height: 4),
             Text(
@@ -114,7 +119,7 @@ class _AppShellState extends State<AppShell> {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? activeColor : AppTokens.textSecondary,
+                color: isSelected ? activeColor : unselectedColor,
               ),
             ),
           ],
@@ -126,6 +131,9 @@ class _AppShellState extends State<AppShell> {
   Widget _buildCenterAlertsButton({
     required String label,
     required Color primaryColor,
+    required Color surfaceElevated,
+    required Color borderColor,
+    required Color unselectedColor,
   }) {
     final isSelected = _currentIndex == 1;
     return GestureDetector(
@@ -139,25 +147,25 @@ class _AppShellState extends State<AppShell> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: isSelected ? primaryColor : AppTokens.surfaceElevated,
+                color: isSelected ? primaryColor : surfaceElevated,
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isSelected ? primaryColor : AppTokens.border,
+                  color: isSelected ? primaryColor : borderColor,
                   width: 2,
                 ),
                 boxShadow: [
                   BoxShadow(
                     color: isSelected
-                        ? primaryColor.withValues(alpha: 0.4)
-                        : Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+                        ? primaryColor.withValues(alpha: 0.35)
+                        : Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
                   ),
                 ],
               ),
               child: Icon(
                 isSelected ? Icons.alarm_on_rounded : Icons.alarm_outlined,
-                color: isSelected ? Colors.white : AppTokens.textSecondary,
+                color: isSelected ? Colors.white : unselectedColor,
                 size: 26,
               ),
             ),
@@ -169,7 +177,7 @@ class _AppShellState extends State<AppShell> {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? primaryColor : AppTokens.textSecondary,
+                color: isSelected ? primaryColor : unselectedColor,
               ),
             ),
           ),
