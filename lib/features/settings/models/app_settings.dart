@@ -149,7 +149,7 @@ class AppSettings {
         elevation: 0,
         centerTitle: false,
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
@@ -157,7 +157,7 @@ class AppSettings {
           side: BorderSide(color: border, width: 1),
         ),
       ),
-      dialogTheme: DialogTheme(
+      dialogTheme: DialogThemeData(
         backgroundColor: surface,
         titleTextStyle: TextStyle(color: textPrimary, fontSize: 16, fontWeight: FontWeight.bold),
         contentTextStyle: TextStyle(color: textSecondary, fontSize: 13),

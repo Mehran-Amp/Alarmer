@@ -470,7 +470,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
     );
   }
 
-  String _buildConditionSummary(AlertRule rule, String lang) {
+  String _buildConditionSummary(AlertRule rule, [String lang = 'fa']) {
     final isFa = lang == 'fa';
     switch (rule.conditionType) {
       case AlertConditionType.percentChange:
@@ -511,7 +511,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
     }
   }
 
-  String _getExchangeDisplayName(String exchangeId, String lang) {
+  String _getExchangeDisplayName(String exchangeId, [String lang = 'fa']) {
     final isFa = lang == 'fa';
     switch (exchangeId.toLowerCase()) {
       case 'binance':
@@ -550,14 +550,14 @@ class _WatchlistPageState extends State<WatchlistPage> {
     return '\$${price.toStringAsFixed(2)}';
   }
 
-  String _formatInterval(int seconds, String lang) {
+  String _formatInterval(int seconds, [String lang = 'fa']) {
     final isFa = lang == 'fa';
     if (seconds >= 3600) return isFa ? '${seconds ~/ 3600} ساعت' : '${seconds ~/ 3600} hours';
     if (seconds >= 60) return isFa ? '${seconds ~/ 60} دقیقه' : '${seconds ~/ 60} min';
     return isFa ? '$seconds ثانیه' : '$seconds sec';
   }
 
-  String _formatTimeAgo(DateTime dt, String lang) {
+  String _formatTimeAgo(DateTime dt, [String lang = 'fa']) {
     final diff = DateTime.now().difference(dt);
     final isFa = lang == 'fa';
     if (diff.inSeconds < 10) return isFa ? 'همین الان' : 'Just now';

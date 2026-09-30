@@ -103,7 +103,7 @@ class BitcoinCheckerApp extends StatelessWidget {
             builder: (context, _) {
               final isLight = settingsService.settings.themePalette == AppThemePalette.lightGreen ||
                   settingsService.settings.themePalette == AppThemePalette.lightOrange;
-              final isFa = settingsService.settings.language == AppLanguage.persian;
+              final isFa = settingsService.settings.language == 'fa';
               return MaterialApp(
                 title: 'Alarmer',
                 debugShowCheckedModeBanner: false,

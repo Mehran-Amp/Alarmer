@@ -137,7 +137,7 @@ class CryptoIcons {
     'AMD': _AssetMeta('AMD', Color(0xFFED1C24), '', customIcon: Icons.memory_rounded),
     'PLTR': _AssetMeta('Palantir', Color(0xFF000000), '', customIcon: Icons.shield_rounded),
     'SMCI': _AssetMeta('Super Micro', Color(0xFF0072CE), '', customIcon: Icons.dns_rounded),
-    'ARM': _AssetMeta('Arm', Color(0xFF0091BD), '', customIcon: Icons.microbiology_rounded),
+    'ARM': _AssetMeta('Arm', Color(0xFF0091BD), '', customIcon: Icons.memory_rounded),
     'QCOM': _AssetMeta('Qualcomm', Color(0xFF3253DC), '', customIcon: Icons.cell_tower_rounded),
     'INTC': _AssetMeta('Intel', Color(0xFF0071C5), '', customIcon: Icons.memory_rounded),
     'BRK-B': _AssetMeta('Berkshire', Color(0xFF002B49), '', customIcon: Icons.domain_rounded),
