@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../base/crypto_catalog_data.dart';
 import '../base/currency_pair.dart';
 import '../base/exchange.dart';
 import '../base/exchange_category.dart';
@@ -14,8 +15,8 @@ class BinanceExchange implements Exchange {
       : _dio = dio ??
             Dio(BaseOptions(
               baseUrl: 'https://api.binance.com',
-              connectTimeout: const Duration(seconds: 10),
-              receiveTimeout: const Duration(seconds: 10),
+              connectTimeout: const Duration(seconds: 8),
+              receiveTimeout: const Duration(seconds: 8),
             ));
 
   @override
@@ -45,62 +46,62 @@ class BinanceExchange implements Exchange {
         final symbolMap = item as Map<String, dynamic>;
         final status = symbolMap['status'] as String?;
         final isSpot = (symbolMap['isSpotTradingAllowed'] as bool?) ?? true;
+        final quote = symbolMap['quoteAsset'] as String? ?? '';
 
-        if (status == 'TRADING' && isSpot) {
+        if (status == 'TRADING' && isSpot && (quote == 'USDT' || quote == 'USDC' || quote == 'BTC')) {
           pairs.add(CurrencyPair(
             baseCurrency: symbolMap['baseAsset'] as String,
-            counterCurrency: symbolMap['quoteAsset'] as String,
+            counterCurrency: quote,
             marketSymbol: symbolMap['symbol'] as String,
           ));
         }
       }
-      return pairs;
-    } catch (e) {
-      throw Exception('Failed to fetch Binance currency pairs: $e');
-    }
+      if (pairs.isNotEmpty) return pairs;
+    } catch (_) {}
+
+    // Instant complete fallback list for uninterrupted access
+    return CryptoCatalogData.buildPairs(quoteCurrencies: ['USDT', 'BTC', 'USDC']);
   }
 
   @override
   Future<PriceSnapshot> fetchSnapshot(CurrencyPair pair) async {
-    try {
-      final response = await _dio.get<Map<String, dynamic>>(
-        'https://api.binance.com/api/v3/ticker/24hr',
-        queryParameters: {'symbol': pair.marketSymbol.toUpperCase()},
-      );
-
-      final json = response.data!;
-      return PriceSnapshot(
-        price: double.parse(json['lastPrice'] as String),
-        volume: double.parse(json['quoteVolume'] as String),
-        fetchedAt: DateTime.fromMillisecondsSinceEpoch(
-          json['closeTime'] as int? ?? DateTime.now().millisecondsSinceEpoch,
-        ),
-      );
-    } catch (e) {
-      throw Exception('Failed to fetch Binance price snapshot for ${pair.marketSymbol}: $e');
-    }
+    final ticker = await fetchTicker(pair);
+    return PriceSnapshot(
+      price: ticker.lastPrice,
+      volume: ticker.volume24h,
+      fetchedAt: ticker.timestamp,
+    );
   }
 
   @override
   Future<MarketTicker> fetchTicker(CurrencyPair pair) async {
+    final symbol = pair.marketSymbol.toUpperCase();
     try {
       final response = await _dio.get(
         '/api/v3/ticker/24hr',
-        queryParameters: {'symbol': pair.marketSymbol.toUpperCase()},
+        queryParameters: {'symbol': symbol},
       );
       final json = response.data as Map<String, dynamic>;
+      final price = double.tryParse(json['lastPrice']?.toString() ?? '0') ?? 0.0;
+      final vol = double.tryParse(json['quoteVolume']?.toString() ?? '0') ?? 0.0;
+      final high = double.tryParse(json['highPrice']?.toString() ?? '0') ?? price;
+      final low = double.tryParse(json['lowPrice']?.toString() ?? '0') ?? price;
+
+      if (price <= 0) {
+        throw Exception('Invalid price received from Binance for $symbol');
+      }
 
       return MarketTicker(
-        lastPrice: double.parse(json['lastPrice'] as String),
-        volume24h: double.parse(json['quoteVolume'] as String),
-        high24h: double.parse(json['highPrice'] as String),
-        low24h: double.parse(json['lowPrice'] as String),
-        bid: json['bidPrice'] != null ? double.parse(json['bidPrice'] as String) : null,
-        ask: json['askPrice'] != null ? double.parse(json['askPrice'] as String) : null,
-        timestamp: DateTime.fromMillisecondsSinceEpoch(json['closeTime'] as int),
+        exchangeId: id,
+        pair: pair,
+        lastPrice: price,
+        volume24h: vol,
+        high24h: high,
+        low24h: low,
+        timestamp: DateTime.now(),
       );
     } catch (e) {
-      throw Exception('Failed to fetch Binance REST ticker for ${pair.marketSymbol}: $e');
+      throw Exception('Binance Live Connection Error for ${pair.displayName}: $e');
     }
   }
 }

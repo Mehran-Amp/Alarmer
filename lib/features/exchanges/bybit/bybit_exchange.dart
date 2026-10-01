@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../base/crypto_catalog_data.dart';
 import '../base/currency_pair.dart';
 import '../base/exchange.dart';
 import '../base/exchange_category.dart';
@@ -6,7 +7,6 @@ import '../base/models/market_ticker.dart';
 import '../base/models/price_snapshot.dart';
 
 /// Bybit REST Exchange Adapter
-/// Direct integration with Bybit v5 Spot REST endpoints.
 class BybitExchange implements Exchange {
   final Dio _dio;
 
@@ -14,8 +14,8 @@ class BybitExchange implements Exchange {
       : _dio = dio ??
             Dio(BaseOptions(
               baseUrl: 'https://api.bybit.com',
-              connectTimeout: const Duration(seconds: 10),
-              receiveTimeout: const Duration(seconds: 10),
+              connectTimeout: const Duration(seconds: 8),
+              receiveTimeout: const Duration(seconds: 8),
             ));
 
   @override
@@ -58,7 +58,7 @@ class BybitExchange implements Exchange {
       }
     } catch (_) {}
 
-    return _fallbackPairs();
+    return CryptoCatalogData.buildPairs(quoteCurrencies: ['USDT', 'USDC']);
   }
 
   @override
@@ -109,15 +109,4 @@ class BybitExchange implements Exchange {
       throw Exception('Bybit Live Connection Error for ${pair.displayName}: $e');
     }
   }
-
-  List<CurrencyPair> _fallbackPairs() => const [
-        CurrencyPair(baseCurrency: 'BTC', counterCurrency: 'USDT', marketSymbol: 'BTCUSDT'),
-        CurrencyPair(baseCurrency: 'ETH', counterCurrency: 'USDT', marketSymbol: 'ETHUSDT'),
-        CurrencyPair(baseCurrency: 'SOL', counterCurrency: 'USDT', marketSymbol: 'SOLUSDT'),
-        CurrencyPair(baseCurrency: 'TON', counterCurrency: 'USDT', marketSymbol: 'TONUSDT'),
-        CurrencyPair(baseCurrency: 'XRP', counterCurrency: 'USDT', marketSymbol: 'XRPUSDT'),
-        CurrencyPair(baseCurrency: 'DOGE', counterCurrency: 'USDT', marketSymbol: 'DOGEUSDT'),
-        CurrencyPair(baseCurrency: 'PEPE', counterCurrency: 'USDT', marketSymbol: 'PEPEUSDT'),
-        CurrencyPair(baseCurrency: 'MNT', counterCurrency: 'USDT', marketSymbol: 'MNTUSDT'),
-      ];
 }

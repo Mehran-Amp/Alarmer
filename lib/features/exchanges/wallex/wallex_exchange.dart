@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../base/crypto_catalog_data.dart';
 import '../base/currency_pair.dart';
 import '../base/exchange.dart';
 import '../base/exchange_category.dart';
@@ -6,7 +7,6 @@ import '../base/models/market_ticker.dart';
 import '../base/models/price_snapshot.dart';
 
 /// Wallex Exchange Adapter (Popular Iranian Crypto Exchange)
-/// Direct REST integration with Wallex public market stats.
 class WallexExchange implements Exchange {
   final Dio _dio;
 
@@ -14,8 +14,8 @@ class WallexExchange implements Exchange {
       : _dio = dio ??
             Dio(BaseOptions(
               baseUrl: 'https://api.wallex.ir/v1',
-              connectTimeout: const Duration(seconds: 10),
-              receiveTimeout: const Duration(seconds: 10),
+              connectTimeout: const Duration(seconds: 8),
+              receiveTimeout: const Duration(seconds: 8),
             ));
 
   @override
@@ -32,13 +32,6 @@ class WallexExchange implements Exchange {
 
   @override
   String get defaultCounterCurrency => 'USDT';
-
-  static const List<String> _popularCoins = [
-    'BTC', 'ETH', 'SOL', 'TON', 'USDT', 'XRP', 'DOGE', 'TRX', 'SHIB', 'PEPE',
-    'ADA', 'BNB', 'NOT', 'SUI', 'AVAX', 'NEAR', 'LINK', 'DOT', 'BCH', 'LTC',
-    'UNI', 'ATOM', 'FET', 'APT', 'ARB', 'OP', 'TIA', 'INJ', 'FTM', 'ALGO',
-    'ICP', 'ETC', 'XLM', 'FIL', 'FLOKI', 'BONK', 'WIF', 'ENA', 'KAS',
-  ];
 
   @override
   Future<List<CurrencyPair>> fetchCurrencyPairs() async {
@@ -75,22 +68,7 @@ class WallexExchange implements Exchange {
       }
     } catch (_) {}
 
-    final list = <CurrencyPair>[];
-    for (final sym in _popularCoins) {
-      if (sym != 'USDT') {
-        list.add(CurrencyPair(
-          baseCurrency: sym,
-          counterCurrency: 'USDT',
-          marketSymbol: '${sym}USDT',
-        ));
-        list.add(CurrencyPair(
-          baseCurrency: sym,
-          counterCurrency: 'TMN',
-          marketSymbol: '${sym}TMN',
-        ));
-      }
-    }
-    return list;
+    return CryptoCatalogData.buildPairs(quoteCurrencies: ['USDT', 'TMN']);
   }
 
   @override

@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../base/crypto_catalog_data.dart';
 import '../base/currency_pair.dart';
 import '../base/exchange.dart';
 import '../base/exchange_category.dart';
@@ -14,8 +15,8 @@ class NobitexExchange implements Exchange {
       : _dio = dio ??
             Dio(BaseOptions(
               baseUrl: 'https://api.nobitex.ir',
-              connectTimeout: const Duration(seconds: 10),
-              receiveTimeout: const Duration(seconds: 10),
+              connectTimeout: const Duration(seconds: 8),
+              receiveTimeout: const Duration(seconds: 8),
             ));
 
   @override
@@ -32,14 +33,6 @@ class NobitexExchange implements Exchange {
 
   @override
   String get defaultCounterCurrency => 'USDT';
-
-  static const List<String> _popularCurrencies = [
-    'BTC', 'ETH', 'SOL', 'USDT', 'TON', 'XRP', 'DOGE', 'TRX', 'SHIB', 'PEPE',
-    'ADA', 'BNB', 'NOT', 'SUI', 'AVAX', 'NEAR', 'POL', 'LINK', 'DOT', 'BCH',
-    'LTC', 'UNI', 'ATOM', 'FET', 'APT', 'ARB', 'OP', 'TIA', 'INJ', 'FTM',
-    'ALGO', 'ICP', 'ETC', 'XLM', 'FIL', 'SAND', 'MANA', 'RENDER', 'GALA',
-    'FLOKI', 'BONK', 'WIF', 'PENDLE', 'JUP', 'PYTH', 'ENA', 'STRK', 'STX', 'KAS',
-  ];
 
   @override
   Future<List<CurrencyPair>> fetchCurrencyPairs() async {
@@ -63,7 +56,6 @@ class NobitexExchange implements Exchange {
         }
 
         if (pairs.isNotEmpty) {
-          // Sort USDT pairs first, then popular coins
           pairs.sort((a, b) {
             if (a.counterCurrency == 'USDT' && b.counterCurrency != 'USDT') return -1;
             if (a.counterCurrency != 'USDT' && b.counterCurrency == 'USDT') return 1;
@@ -74,23 +66,11 @@ class NobitexExchange implements Exchange {
       }
     } catch (_) {}
 
-    // Predefined robust list if offline or stats endpoint is busy
-    final list = <CurrencyPair>[];
-    for (final sym in _popularCurrencies) {
-      if (sym != 'USDT') {
-        list.add(CurrencyPair(
-          baseCurrency: sym,
-          counterCurrency: 'USDT',
-          marketSymbol: '${sym.toLowerCase()}-usdt',
-        ));
-        list.add(CurrencyPair(
-          baseCurrency: sym,
-          counterCurrency: 'TMN',
-          marketSymbol: '${sym.toLowerCase()}-rls',
-        ));
-      }
-    }
-    return list;
+    // Complete Nobitex cryptos in both USDT and TMN
+    return CryptoCatalogData.buildPairs(
+      quoteCurrencies: ['USDT', 'TMN'],
+      symbolFormatter: (b, q) => '${b.toLowerCase()}-${q == "TMN" ? "rls" : q.toLowerCase()}',
+    );
   }
 
   @override
@@ -123,7 +103,6 @@ class NobitexExchange implements Exchange {
       }
 
       var price = double.tryParse(data['latest']?.toString() ?? '0') ?? 0.0;
-      // If price is in RLS (Rials), convert to Toman by dividing by 10 for clean display
       if (dst == 'rls' && price > 0) {
         price = price / 10.0;
       }
@@ -146,7 +125,6 @@ class NobitexExchange implements Exchange {
         timestamp: DateTime.now(),
       );
     } catch (e) {
-      // Throw exception to indicate network/fetch failure rather than generating fake prices
       throw Exception('Nobitex Live Connection Error for ${pair.displayName}: $e');
     }
   }

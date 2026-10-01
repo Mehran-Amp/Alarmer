@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../base/crypto_catalog_data.dart';
 import '../base/currency_pair.dart';
 import '../base/exchange.dart';
 import '../base/exchange_category.dart';
@@ -13,8 +14,8 @@ class CoinbaseExchange implements Exchange {
       : _dio = dio ??
             Dio(BaseOptions(
               baseUrl: 'https://api.exchange.coinbase.com',
-              connectTimeout: const Duration(seconds: 10),
-              receiveTimeout: const Duration(seconds: 10),
+              connectTimeout: const Duration(seconds: 8),
+              receiveTimeout: const Duration(seconds: 8),
             ));
 
   @override
@@ -37,7 +38,7 @@ class CoinbaseExchange implements Exchange {
     try {
       final response = await _dio.get('/products');
       final data = response.data as List;
-      return data
+      final pairs = data
           .where((item) => item['status'] == 'online')
           .map((item) => CurrencyPair(
                 baseCurrency: (item['base_currency'] as String).toUpperCase(),
@@ -45,9 +46,13 @@ class CoinbaseExchange implements Exchange {
                 marketSymbol: (item['id'] as String).toUpperCase(),
               ))
           .toList();
-    } catch (_) {
-      return _defaultPairs();
-    }
+      if (pairs.isNotEmpty) return pairs;
+    } catch (_) {}
+
+    return CryptoCatalogData.buildPairs(
+      quoteCurrencies: ['USD', 'USDT', 'EUR'],
+      symbolFormatter: (b, q) => '$b-$q',
+    );
   }
 
   @override
@@ -68,6 +73,11 @@ class CoinbaseExchange implements Exchange {
       final data = response.data as Map<String, dynamic>;
       final price = double.tryParse(data['price']?.toString() ?? '0') ?? 0.0;
       final vol = double.tryParse(data['volume']?.toString() ?? '0') ?? 0.0;
+
+      if (price <= 0) {
+        throw Exception('Invalid price from Coinbase ($price)');
+      }
+
       return MarketTicker(
         exchangeId: id,
         pair: pair,
@@ -75,22 +85,8 @@ class CoinbaseExchange implements Exchange {
         volume24h: vol,
         timestamp: DateTime.now(),
       );
-    } catch (_) {
-      return MarketTicker(
-        exchangeId: id,
-        pair: pair,
-        lastPrice: 0.0,
-        volume24h: 0.0,
-        timestamp: DateTime.now(),
-      );
+    } catch (e) {
+      throw Exception('Coinbase Live Connection Error for ${pair.displayName}: $e');
     }
   }
-
-  List<CurrencyPair> _defaultPairs() => [
-        const CurrencyPair(baseCurrency: 'BTC', counterCurrency: 'USD', marketSymbol: 'BTC-USD'),
-        const CurrencyPair(baseCurrency: 'ETH', counterCurrency: 'USD', marketSymbol: 'ETH-USD'),
-        const CurrencyPair(baseCurrency: 'SOL', counterCurrency: 'USD', marketSymbol: 'SOL-USD'),
-        const CurrencyPair(baseCurrency: 'ADA', counterCurrency: 'USD', marketSymbol: 'ADA-USD'),
-        const CurrencyPair(baseCurrency: 'DOGE', counterCurrency: 'USD', marketSymbol: 'DOGE-USD'),
-      ];
 }

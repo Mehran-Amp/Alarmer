@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../base/crypto_catalog_data.dart';
 import '../base/currency_pair.dart';
 import '../base/exchange.dart';
 import '../base/exchange_category.dart';
@@ -6,8 +7,7 @@ import '../base/models/market_ticker.dart';
 import '../base/models/price_snapshot.dart';
 
 /// Production-grade CoinGecko Exchange Adapter.
-/// Covers 10,000+ altcoins and long-tail tokens.
-/// Features intelligent rate-limit throttling (HTTP 429 protection) and pure REST snapshots.
+/// Covers top altcoins and long-tail tokens.
 class CoinGeckoExchange implements Exchange {
   final Dio _dio;
   final Map<String, _CachedTicker> _tickerCache = {};
@@ -18,11 +18,11 @@ class CoinGeckoExchange implements Exchange {
       : _dio = dio ??
             Dio(BaseOptions(
               baseUrl: 'https://api.coingecko.com/api/v3',
-              connectTimeout: const Duration(seconds: 12),
-              receiveTimeout: const Duration(seconds: 12),
+              connectTimeout: const Duration(seconds: 8),
+              receiveTimeout: const Duration(seconds: 8),
               headers: {
                 'Accept': 'application/json',
-                'User-Agent': 'BitcoinChecker-Flutter/1.0',
+                'User-Agent': 'Alarmer/1.0',
               },
             ));
 
@@ -30,7 +30,7 @@ class CoinGeckoExchange implements Exchange {
   String get id => 'coingecko';
 
   @override
-  String get name => 'CoinGecko (10,000+ Coins)';
+  String get name => 'CoinGecko (250+ Coins)';
 
   @override
   ExchangeCategory get category => ExchangeCategory.aggregator;
@@ -43,7 +43,6 @@ class CoinGeckoExchange implements Exchange {
 
   @override
   Future<List<CurrencyPair>> fetchCurrencyPairs() async {
-    // Cache pairs for 1 hour to respect CoinGecko free-tier rate limits
     if (_cachedPairs != null && _pairsCacheTimestamp != null) {
       final cacheAge = DateTime.now().difference(_pairsCacheTimestamp!);
       if (cacheAge < const Duration(hours: 1)) {
@@ -52,7 +51,6 @@ class CoinGeckoExchange implements Exchange {
     }
 
     try {
-      // Fetch top 250 assets by market cap with pricing data
       final response = await _dio.get(
         '/coins/markets',
         queryParameters: {
@@ -70,9 +68,8 @@ class CoinGeckoExchange implements Exchange {
       for (final item in list) {
         final coin = item as Map<String, dynamic>;
         final symbol = (coin['symbol'] as String).toUpperCase();
-        final coinId = coin['id'] as String; // e.g. "bitcoin", "solana", "pepe"
+        final coinId = coin['id'] as String;
 
-        // Map marketSymbol as "coinId:counterCurrency" (e.g. "bitcoin:usd")
         pairs.add(CurrencyPair(
           baseCurrency: symbol,
           counterCurrency: 'USD',
@@ -80,19 +77,19 @@ class CoinGeckoExchange implements Exchange {
         ));
       }
 
-      _cachedPairs = pairs;
-      _pairsCacheTimestamp = DateTime.now();
-      return pairs;
-    } catch (e) {
-      // Fallback to top common pairs if network fails
-      return const [
-        CurrencyPair(baseCurrency: 'BTC', counterCurrency: 'USD', marketSymbol: 'bitcoin:usd'),
-        CurrencyPair(baseCurrency: 'ETH', counterCurrency: 'USD', marketSymbol: 'ethereum:usd'),
-        CurrencyPair(baseCurrency: 'SOL', counterCurrency: 'USD', marketSymbol: 'solana:usd'),
-        CurrencyPair(baseCurrency: 'DOGE', counterCurrency: 'USD', marketSymbol: 'dogecoin:usd'),
-        CurrencyPair(baseCurrency: 'PEPE', counterCurrency: 'USD', marketSymbol: 'pepe:usd'),
-      ];
-    }
+      if (pairs.isNotEmpty) {
+        _cachedPairs = pairs;
+        _pairsCacheTimestamp = DateTime.now();
+        return pairs;
+      }
+    } catch (_) {}
+
+    final fallback = CryptoCatalogData.buildPairs(
+      quoteCurrencies: ['USD'],
+      symbolFormatter: (b, q) => '${b.toLowerCase()}:usd',
+    );
+    _cachedPairs = fallback;
+    return fallback;
   }
 
   @override
@@ -110,9 +107,8 @@ class CoinGeckoExchange implements Exchange {
     final coinId = _extractCoinId(pair);
     final counter = pair.counterCurrency.toLowerCase();
 
-    // Check 20-second in-memory cache to strictly avoid HTTP 429
     final cached = _tickerCache[pair.marketSymbol];
-    if (cached != null && DateTime.now().difference(cached.timestamp) < const Duration(seconds: 20)) {
+    if (cached != null && DateTime.now().difference(cached.timestamp) < const Duration(seconds: 15)) {
       return cached.ticker;
     }
 
@@ -124,7 +120,6 @@ class CoinGeckoExchange implements Exchange {
           'vs_currencies': counter,
           'include_24hr_vol': true,
           'include_24hr_change': true,
-          'include_last_updated_at': true,
         },
       );
 
@@ -139,11 +134,12 @@ class CoinGeckoExchange implements Exchange {
       final volume = (coinData['${counter}_24h_vol'] as num?)?.toDouble() ?? 0.0;
       final change24h = (coinData['${counter}_24h_change'] as num?)?.toDouble() ?? 0.0;
 
-      // Approximate 24h high/low from price and 24h percentage change
       final high24h = change24h >= 0 ? price * (1 + (change24h / 100)) : price;
       final low24h = change24h < 0 ? price * (1 + (change24h / 100)) : price * 0.95;
 
       final ticker = MarketTicker(
+        exchangeId: id,
+        pair: pair,
         lastPrice: price,
         volume24h: volume,
         high24h: high24h,
@@ -155,7 +151,6 @@ class CoinGeckoExchange implements Exchange {
       return ticker;
     } on DioException catch (e) {
       if (e.response?.statusCode == 429 && cached != null) {
-        // Return cached ticker if rate limited
         return cached.ticker;
       }
       throw Exception('CoinGecko REST Error: ${e.message}');

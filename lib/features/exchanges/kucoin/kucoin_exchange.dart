@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../base/crypto_catalog_data.dart';
 import '../base/currency_pair.dart';
 import '../base/exchange.dart';
 import '../base/exchange_category.dart';
@@ -13,8 +14,8 @@ class KuCoinExchange implements Exchange {
       : _dio = dio ??
             Dio(BaseOptions(
               baseUrl: 'https://api.kucoin.com',
-              connectTimeout: const Duration(seconds: 10),
-              receiveTimeout: const Duration(seconds: 10),
+              connectTimeout: const Duration(seconds: 8),
+              receiveTimeout: const Duration(seconds: 8),
             ));
 
   @override
@@ -37,16 +38,20 @@ class KuCoinExchange implements Exchange {
     try {
       final response = await _dio.get('/api/v1/symbols');
       final data = response.data['data'] as List;
-      return data
+      final pairs = data
           .map((item) => CurrencyPair(
                 baseCurrency: (item['baseCurrency'] as String).toUpperCase(),
                 counterCurrency: (item['quoteCurrency'] as String).toUpperCase(),
                 marketSymbol: (item['symbol'] as String).toUpperCase(),
               ))
           .toList();
-    } catch (_) {
-      return _defaultPairs();
-    }
+      if (pairs.isNotEmpty) return pairs;
+    } catch (_) {}
+
+    return CryptoCatalogData.buildPairs(
+      quoteCurrencies: ['USDT', 'BTC', 'USDC'],
+      symbolFormatter: (b, q) => '$b-$q',
+    );
   }
 
   @override
@@ -67,6 +72,11 @@ class KuCoinExchange implements Exchange {
       final data = response.data['data'] as Map<String, dynamic>;
       final price = double.tryParse(data['price']?.toString() ?? '0') ?? 0.0;
       final vol = double.tryParse(data['size']?.toString() ?? '0') ?? 0.0;
+
+      if (price <= 0) {
+        throw Exception('Invalid price from KuCoin ($price)');
+      }
+
       return MarketTicker(
         exchangeId: id,
         pair: pair,
@@ -74,23 +84,8 @@ class KuCoinExchange implements Exchange {
         volume24h: vol,
         timestamp: DateTime.now(),
       );
-    } catch (_) {
-      return MarketTicker(
-        exchangeId: id,
-        pair: pair,
-        lastPrice: 0.0,
-        volume24h: 0.0,
-        timestamp: DateTime.now(),
-      );
+    } catch (e) {
+      throw Exception('KuCoin Live Connection Error for ${pair.displayName}: $e');
     }
   }
-
-  List<CurrencyPair> _defaultPairs() => [
-        const CurrencyPair(baseCurrency: 'BTC', counterCurrency: 'USDT', marketSymbol: 'BTC-USDT'),
-        const CurrencyPair(baseCurrency: 'ETH', counterCurrency: 'USDT', marketSymbol: 'ETH-USDT'),
-        const CurrencyPair(baseCurrency: 'SOL', counterCurrency: 'USDT', marketSymbol: 'SOL-USDT'),
-        const CurrencyPair(baseCurrency: 'XRP', counterCurrency: 'USDT', marketSymbol: 'XRP-USDT'),
-        const CurrencyPair(baseCurrency: 'PEPE', counterCurrency: 'USDT', marketSymbol: 'PEPE-USDT'),
-        const CurrencyPair(baseCurrency: 'DOGE', counterCurrency: 'USDT', marketSymbol: 'DOGE-USDT'),
-      ];
 }

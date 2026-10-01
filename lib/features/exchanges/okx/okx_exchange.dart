@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../base/crypto_catalog_data.dart';
 import '../base/currency_pair.dart';
 import '../base/exchange.dart';
 import '../base/exchange_category.dart';
@@ -6,7 +7,6 @@ import '../base/models/market_ticker.dart';
 import '../base/models/price_snapshot.dart';
 
 /// OKX REST Exchange Adapter
-/// Direct integration with OKX v5 Public Spot REST endpoints.
 class OKXExchange implements Exchange {
   final Dio _dio;
 
@@ -14,8 +14,8 @@ class OKXExchange implements Exchange {
       : _dio = dio ??
             Dio(BaseOptions(
               baseUrl: 'https://www.okx.com',
-              connectTimeout: const Duration(seconds: 10),
-              receiveTimeout: const Duration(seconds: 10),
+              connectTimeout: const Duration(seconds: 8),
+              receiveTimeout: const Duration(seconds: 8),
             ));
 
   @override
@@ -58,7 +58,10 @@ class OKXExchange implements Exchange {
       }
     } catch (_) {}
 
-    return _fallbackPairs();
+    return CryptoCatalogData.buildPairs(
+      quoteCurrencies: ['USDT', 'USDC'],
+      symbolFormatter: (b, q) => '$b-$q',
+    );
   }
 
   @override
@@ -107,15 +110,4 @@ class OKXExchange implements Exchange {
       throw Exception('OKX Live Connection Error for ${pair.displayName}: $e');
     }
   }
-
-  List<CurrencyPair> _fallbackPairs() => const [
-        CurrencyPair(baseCurrency: 'BTC', counterCurrency: 'USDT', marketSymbol: 'BTC-USDT'),
-        CurrencyPair(baseCurrency: 'ETH', counterCurrency: 'USDT', marketSymbol: 'ETH-USDT'),
-        CurrencyPair(baseCurrency: 'SOL', counterCurrency: 'USDT', marketSymbol: 'SOL-USDT'),
-        CurrencyPair(baseCurrency: 'TON', counterCurrency: 'USDT', marketSymbol: 'TON-USDT'),
-        CurrencyPair(baseCurrency: 'XRP', counterCurrency: 'USDT', marketSymbol: 'XRP-USDT'),
-        CurrencyPair(baseCurrency: 'DOGE', counterCurrency: 'USDT', marketSymbol: 'DOGE-USDT'),
-        CurrencyPair(baseCurrency: 'PEPE', counterCurrency: 'USDT', marketSymbol: 'PEPE-USDT'),
-        CurrencyPair(baseCurrency: 'SUI', counterCurrency: 'USDT', marketSymbol: 'SUI-USDT'),
-      ];
 }

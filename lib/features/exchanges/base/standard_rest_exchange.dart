@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import '../base/crypto_catalog_data.dart';
 import '../base/currency_pair.dart';
 import '../base/exchange.dart';
 import '../base/exchange_category.dart';
@@ -36,11 +37,11 @@ class StandardRestExchange implements Exchange {
     Dio? dio,
   }) : _dio = dio ??
             Dio(BaseOptions(
-              connectTimeout: const Duration(seconds: 10),
-              receiveTimeout: const Duration(seconds: 10),
+              connectTimeout: const Duration(seconds: 8),
+              receiveTimeout: const Duration(seconds: 8),
               headers: {
                 'Accept': 'application/json',
-                'User-Agent': 'Mozilla/5.0 (compatible; BitcoinChecker/1.0)',
+                'User-Agent': 'Alarmer/1.0',
               },
             ));
 
@@ -51,7 +52,7 @@ class StandardRestExchange implements Exchange {
         final response = await _dio.get(pairsUrl!);
         final data = response.data;
         if (data is List) {
-          return data.take(150).map((item) {
+          final list = data.map((item) {
             if (item is Map) {
               final base = (item['base'] ?? item['baseCurrency'] ?? item['base_currency'] ?? 'BTC').toString().toUpperCase();
               final target = (item['target'] ?? item['quoteCurrency'] ?? item['quote_currency'] ?? defaultCounterCurrency).toString().toUpperCase();
@@ -60,6 +61,7 @@ class StandardRestExchange implements Exchange {
             }
             return CurrencyPair(baseCurrency: 'BTC', counterCurrency: defaultCounterCurrency, marketSymbol: 'BTC$defaultCounterCurrency');
           }).toList();
+          if (list.isNotEmpty) return list;
         } else if (data is Map && data['result'] is Map) {
           final map = data['result'] as Map<String, dynamic>;
           final pairs = <CurrencyPair>[];
@@ -75,7 +77,12 @@ class StandardRestExchange implements Exchange {
         }
       } catch (_) {}
     }
-    return fallbackPairs;
+
+    if (fallbackPairs.isNotEmpty) {
+      return fallbackPairs;
+    }
+
+    return CryptoCatalogData.buildPairs(quoteCurrencies: [defaultCounterCurrency]);
   }
 
   @override
@@ -107,7 +114,6 @@ class StandardRestExchange implements Exchange {
         double vol = 0.0;
 
         if (data is Map<String, dynamic>) {
-          // Check common API response formats (Binance, Gate, MEXC, KuCoin, etc.)
           final d = data['data'] is Map ? data['data'] as Map<String, dynamic> : data;
           price = double.tryParse(d['lastPrice']?.toString() ?? d['last']?.toString() ?? d['price']?.toString() ?? d['close']?.toString() ?? '0') ?? 0.0;
           vol = double.tryParse(d['volume']?.toString() ?? d['vol']?.toString() ?? d['volume24h']?.toString() ?? d['quoteVolume']?.toString() ?? '0') ?? 0.0;
@@ -147,7 +153,6 @@ class StandardRestExchange implements Exchange {
       }
     } catch (_) {}
 
-    // 3. Throw exception if offline or live connection fails - NEVER return fake 0 or fabricated price
     throw Exception('Connection error: Unable to fetch live price for ${pair.displayName} on $name');
   }
 }

@@ -192,13 +192,23 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
           : await widget.registry.getCurrencyPairs(_selectedExchange!.id);
       if (mounted) {
         setState(() {
-          _exchangePairs = pairs;
+          _exchangePairs = pairs.isNotEmpty
+              ? pairs
+              : CryptoCatalogData.buildPairs(
+                  quoteCurrencies: [_selectedExchange!.defaultCounterCurrency],
+                );
           _isLoadingPairs = false;
         });
       }
     } catch (_) {
       if (mounted) {
-        setState(() => _isLoadingPairs = false);
+        final fallback = CryptoCatalogData.buildPairs(
+          quoteCurrencies: [_selectedExchange?.defaultCounterCurrency ?? 'USDT'],
+        );
+        setState(() {
+          _exchangePairs = fallback;
+          _isLoadingPairs = false;
+        });
       }
     }
   }
@@ -761,42 +771,84 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
         Expanded(
           child: _isLoadingPairs
               ? Center(child: CircularProgressIndicator(color: theme.colorScheme.primary))
-              : ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: filtered.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
-                  itemBuilder: (context, index) {
-                    final pair = filtered[index];
-                    return InkWell(
-                      onTap: () => _onPairChosen(pair),
-                      borderRadius: BorderRadius.circular(14),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surface,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: theme.dividerColor),
-                        ),
-                        child: Row(
+              : (filtered.isEmpty
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            CryptoIcons.buildLogo(pair.baseCurrency, size: 32),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                pair.displayName,
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
-                              ),
-                            ),
+                            Icon(Icons.search_off_rounded, size: 48, color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
+                            const SizedBox(height: 12),
                             Text(
-                              AppStrings.get('select_cta', lang),
-                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+                              'نماد مورد نظر یافت نشد',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: theme.colorScheme.onSurface),
                             ),
+                            if (_pairSearchQuery.trim().isNotEmpty) ...[
+                              const SizedBox(height: 16),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  final base = _pairSearchQuery.trim().toUpperCase();
+                                  final quote = _selectedExchange?.defaultCounterCurrency ?? 'USDT';
+                                  _onPairChosen(CurrencyPair(
+                                    baseCurrency: base,
+                                    counterCurrency: quote,
+                                    marketSymbol: '$base$quote',
+                                  ));
+                                },
+                                icon: const Icon(Icons.add_circle_outline_rounded, size: 18),
+                                label: Text(
+                                  'پایش دستی ${_pairSearchQuery.trim().toUpperCase()} / ${_selectedExchange?.defaultCounterCurrency ?? "USDT"}',
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: theme.colorScheme.primary,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),
-                    );
-                  },
-                ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: filtered.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final pair = filtered[index];
+                        return InkWell(
+                          onTap: () => _onPairChosen(pair),
+                          borderRadius: BorderRadius.circular(14),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surface,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: theme.dividerColor),
+                            ),
+                            child: Row(
+                              children: [
+                                CryptoIcons.buildLogo(pair.baseCurrency, size: 32),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    pair.displayName,
+                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
+                                  ),
+                                ),
+                                Text(
+                                  AppStrings.get('select_cta', lang),
+                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    )),
         ),
       ],
     );
