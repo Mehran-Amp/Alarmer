@@ -24,14 +24,14 @@ class _SettingsPageState extends State<SettingsPage> {
   final List<Map<String, String>> _supportedLanguages = const [
     {'code': 'fa', 'name': 'فارسی', 'native': 'فارسی', 'flag': '🇮🇷'},
     {'code': 'en', 'name': 'English', 'native': 'English', 'flag': '🇺🇸'},
+    {'code': 'ckb', 'name': 'Kurdish Sorani', 'native': 'کوردی سۆرانی', 'flag': '☀️'},
+    {'code': 'ar', 'name': 'Arabic', 'native': 'العربية', 'flag': '🇸🇦'},
     {'code': 'de', 'name': 'German', 'native': 'Deutsch', 'flag': '🇩🇪'},
     {'code': 'fr', 'name': 'French', 'native': 'Français', 'flag': '🇫🇷'},
     {'code': 'es', 'name': 'Spanish', 'native': 'Español', 'flag': '🇪🇸'},
+    {'code': 'tr', 'name': 'Turkish', 'native': 'Türkçe', 'flag': '🇹🇷'},
     {'code': 'zh', 'name': 'Chinese', 'native': '中文', 'flag': '🇨🇳'},
     {'code': 'ko', 'name': 'Korean', 'native': '한국어', 'flag': '🇰🇷'},
-    {'code': 'ckb', 'name': 'Kurdish Sorani', 'native': 'کوردی سۆرانی', 'flag': '☀️'},
-    {'code': 'ar', 'name': 'Arabic', 'native': 'العربية', 'flag': '🇸🇦'},
-    {'code': 'tr', 'name': 'Turkish', 'native': 'Türkçe', 'flag': '🇹🇷'},
   ];
 
   @override
@@ -51,7 +51,7 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  Future<void> _requestBatteryExemption() async {
+  Future<void> _requestBatteryExemption(String lang) async {
     final status = await Permission.ignoreBatteryOptimizations.request();
     if (mounted) {
       setState(() {
@@ -61,7 +61,7 @@ class _SettingsPageState extends State<SettingsPage> {
         final theme = Theme.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('معافیت از بهینه‌سازی باتری با موفقیت ثبت شد.'),
+            content: Text(AppStrings.get('battery_exempt_success', lang)),
             backgroundColor: theme.colorScheme.surfaceContainerHighest,
           ),
         );
@@ -71,82 +71,83 @@ class _SettingsPageState extends State<SettingsPage> {
 
   void _showLanguagePicker(BuildContext context, SettingsService settingsService, String currentLang) {
     final theme = Theme.of(context);
+    final isRtl = AppStrings.isRtl(currentLang);
+
     showModalBottomSheet(
       context: context,
       backgroundColor: theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setSheetState) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      AppStrings.get('select_language', currentLang),
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onSurface,
-                      ),
+      builder: (ctx) => Directionality(
+        textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    AppStrings.get('select_language', currentLang),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface,
                     ),
-                    IconButton(
-                      icon: Icon(Icons.close_rounded, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: ListView.separated(
-                    itemCount: _supportedLanguages.length,
-                    separatorBuilder: (_, __) => Divider(height: 1, color: theme.dividerColor),
-                    itemBuilder: (context, index) {
-                      final lang = _supportedLanguages[index];
-                      final isSelected = currentLang == lang['code'];
-                      return Material(
-                        color: Colors.transparent,
-                        child: ListTile(
-                          leading: Text(lang['flag']!, style: const TextStyle(fontSize: 22)),
-                          title: Text(
-                            lang['native']!,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                              color: theme.colorScheme.onSurface,
-                            ),
-                          ),
-                          subtitle: Text(
-                            lang['name']!,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
-                            ),
-                          ),
-                          trailing: isSelected
-                              ? Icon(Icons.check_circle_rounded, color: theme.colorScheme.primary)
-                              : null,
-                          selected: isSelected,
-                          selectedTileColor: theme.colorScheme.primary.withValues(alpha: 0.12),
-                          onTap: () async {
-                            await settingsService.setLanguage(lang['code']!);
-                            if (ctx.mounted) Navigator.pop(ctx);
-                          },
-                        ),
-                      );
-                    },
                   ),
+                  IconButton(
+                    icon: Icon(Icons.close_rounded, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Expanded(
+                child: ListView.separated(
+                  itemCount: _supportedLanguages.length,
+                  separatorBuilder: (_, __) => Divider(height: 1, color: theme.dividerColor),
+                  itemBuilder: (context, index) {
+                    final l = _supportedLanguages[index];
+                    final isSelected = currentLang == l['code'];
+                    return Material(
+                      color: Colors.transparent,
+                      child: ListTile(
+                        leading: Text(l['flag']!, style: const TextStyle(fontSize: 22)),
+                        title: Text(
+                          l['native']!,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                        subtitle: Text(
+                          l['name']!,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.55),
+                          ),
+                        ),
+                        trailing: isSelected
+                            ? Icon(Icons.check_circle_rounded, color: theme.colorScheme.primary)
+                            : null,
+                        selected: isSelected,
+                        selectedTileColor: theme.colorScheme.primary.withValues(alpha: 0.12),
+                        onTap: () async {
+                          await settingsService.setLanguage(l['code']!);
+                          if (ctx.mounted) Navigator.pop(ctx);
+                        },
+                      ),
+                    );
+                  },
                 ),
-              ],
-            ),
-          );
-        },
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -201,55 +202,59 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _importBackup(BuildContext context, String lang) async {
     final controller = TextEditingController();
     final theme = Theme.of(context);
+    final isRtl = AppStrings.isRtl(lang);
 
     final jsonString = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: theme.colorScheme.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          AppStrings.get('restore_backup', lang),
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: theme.colorScheme.onSurface),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'متن فایل JSON پشتیبان‌گیری شده را در کادر زیر جای‌گذاری (Paste) کنید:',
-              style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              maxLines: 6,
-              style: TextStyle(fontFamily: 'monospace', fontSize: 12, color: theme.colorScheme.onSurface),
-              decoration: InputDecoration(
-                hintText: '[{"uuid": "...", "marketSymbol": "BTCUSDT", ...}]',
-                filled: true,
-                fillColor: theme.colorScheme.surfaceContainerHighest,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      builder: (ctx) => Directionality(
+        textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
+        child: AlertDialog(
+          backgroundColor: theme.colorScheme.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            AppStrings.get('restore_backup', lang),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: theme.colorScheme.onSurface),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                AppStrings.get('restore_dialog_hint', lang),
+                style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
               ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                maxLines: 6,
+                style: TextStyle(fontFamily: 'monospace', fontSize: 12, color: theme.colorScheme.onSurface),
+                decoration: InputDecoration(
+                  hintText: '[{"uuid": "...", "marketSymbol": "BTCUSDT", ...}]',
+                  filled: true,
+                  fillColor: theme.colorScheme.surfaceContainerHighest,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(
+                AppStrings.get('cancel', lang),
+                style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: Colors.white,
+              ),
+              child: Text(AppStrings.get('restore_dialog_btn', lang)),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(
-              'انصراف',
-              style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: theme.colorScheme.primary,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('تأیید و بازیابی'),
-          ),
-        ],
       ),
     );
 
@@ -269,7 +274,7 @@ class _SettingsPageState extends State<SettingsPage> {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('خطا در خواندن فایل JSON. لطفاً از صحت فرمت اطمینان حاصل کنید.'),
+              content: Text('Format error in JSON backup file.'),
               backgroundColor: AppTokens.negative,
             ),
           );
@@ -280,36 +285,41 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _clearHistory(BuildContext context, String lang) async {
     final theme = Theme.of(context);
+    final isRtl = AppStrings.isRtl(lang);
+
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: theme.colorScheme.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          AppStrings.get('clear_history', lang),
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: theme.colorScheme.onSurface),
-        ),
-        content: Text(
-          'آیا از پاک کردن تمامی اعلان‌ها و رکوردهای ثبت‌شده اطمینان دارید؟',
-          style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(
-              'انصراف',
-              style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
-            ),
+      builder: (ctx) => Directionality(
+        textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
+        child: AlertDialog(
+          backgroundColor: theme.colorScheme.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            AppStrings.get('clear_history', lang),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: theme.colorScheme.onSurface),
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTokens.negative,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('پاک‌سازی'),
+          content: Text(
+            AppStrings.get('clear_history_confirm', lang),
+            style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
           ),
-        ],
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(
+                AppStrings.get('cancel', lang),
+                style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTokens.negative,
+                foregroundColor: Colors.white,
+              ),
+              child: Text(AppStrings.get('clear_history_btn', lang)),
+            ),
+          ],
+        ),
       ),
     );
 
@@ -319,7 +329,7 @@ class _SettingsPageState extends State<SettingsPage> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('تمامی لاگ‌های تاریخچه اعلان‌ها پاک شدند.'),
+            content: Text(AppStrings.get('clear_history_success', lang)),
             backgroundColor: theme.colorScheme.surfaceContainerHighest,
           ),
         );
@@ -356,7 +366,7 @@ class _SettingsPageState extends State<SettingsPage> {
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: AppTokens.space16, vertical: AppTokens.space20),
         children: [
-          // Section 1: Themes & Colors (4 Modes) - Reactive
+          // Section 1: Themes & Colors (4 Modes)
           _buildSectionHeader(AppStrings.get('theme_and_colors', lang), theme),
           const SizedBox(height: AppTokens.space8),
 
@@ -443,7 +453,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: theme.colorScheme.onSurface),
                       ),
                       Text(
-                        '${currentLangObj['name']} (۱۰ زبان)',
+                        '${currentLangObj['name']} (10 Languages)',
                         style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.55)),
                       ),
                     ],
@@ -526,7 +536,7 @@ class _SettingsPageState extends State<SettingsPage> {
           _buildActionTile(
             context: context,
             title: AppStrings.get('export_backup', lang),
-            subtitle: 'خروجی گرفتن از تمام هشدارهای فعال در قالب فایل JSON',
+            subtitle: AppStrings.get('export_backup_desc', lang),
             icon: Icons.cloud_upload_rounded,
             color: theme.colorScheme.primary,
             onTap: () => _exportBackup(context, lang),
@@ -536,7 +546,7 @@ class _SettingsPageState extends State<SettingsPage> {
           _buildActionTile(
             context: context,
             title: AppStrings.get('restore_backup', lang),
-            subtitle: 'وارد کردن و بازگردانی هشدارها از فایل یا متن JSON',
+            subtitle: AppStrings.get('restore_backup_desc', lang),
             icon: Icons.cloud_download_rounded,
             color: theme.colorScheme.secondary,
             onTap: () => _importBackup(context, lang),
@@ -546,7 +556,7 @@ class _SettingsPageState extends State<SettingsPage> {
           _buildActionTile(
             context: context,
             title: AppStrings.get('clear_history', lang),
-            subtitle: 'حذف تمامی گزارش‌ها و لاگ‌های ثبت‌شده',
+            subtitle: AppStrings.get('clear_history_desc', lang),
             icon: Icons.delete_outline_rounded,
             color: AppTokens.negative,
             onTap: () => _clearHistory(context, lang),
@@ -585,11 +595,13 @@ class _SettingsPageState extends State<SettingsPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'معافیت از محدودیت باتری',
+                              AppStrings.get('battery_exempt_title', lang),
                               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
                             ),
                             Text(
-                              _isBatteryExempt ? 'فعال (هشدارها سر وقت اجرا می‌شوند)' : 'غیرفعال (ممکن است سیستم هشدار را متوقف کند)',
+                              _isBatteryExempt
+                                  ? AppStrings.get('battery_exempt_active', lang)
+                                  : AppStrings.get('battery_exempt_inactive', lang),
                               style: TextStyle(
                                 fontSize: 11,
                                 color: _isBatteryExempt ? theme.colorScheme.primary : AppTokens.warning,
@@ -605,7 +617,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _requestBatteryExemption,
+                        onPressed: () => _requestBatteryExemption(lang),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: theme.colorScheme.primary,
                           foregroundColor: Colors.white,

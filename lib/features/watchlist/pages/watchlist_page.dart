@@ -35,7 +35,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
     );
   }
 
-  Future<void> _manualCheck(AlertRule rule, SchedulerService scheduler) async {
+  Future<void> _manualCheck(AlertRule rule, SchedulerService scheduler, String lang) async {
     setState(() => _checkingRuleUuids.add(rule.uuid));
     try {
       await scheduler.checkRuleNow(rule);
@@ -43,7 +43,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
         final theme = Theme.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('بررسی قیمت انجام شد: ${rule.pair.displayName}'),
+            content: Text('${AppStrings.get('check_price_done', lang)}${rule.pair.displayName}'),
             backgroundColor: theme.colorScheme.surfaceContainerHighest,
             duration: const Duration(seconds: 2),
           ),
@@ -193,10 +193,10 @@ class _WatchlistPageState extends State<WatchlistPage> {
         repository.deleteRule(rule.uuid);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('هشدار ${rule.pair.displayName} حذف شد'),
+            content: Text('${AppStrings.get('alert_deleted_msg', lang)}${rule.pair.displayName}'),
             backgroundColor: theme.colorScheme.surfaceContainerHighest,
             action: SnackBarAction(
-              label: 'بازگردانی',
+              label: AppStrings.get('undo_action', lang),
               textColor: theme.colorScheme.primary,
               onPressed: () => repository.saveRule(rule),
             ),
@@ -383,7 +383,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
                   ),
                 const SizedBox(width: 8),
                 InkWell(
-                  onTap: isChecking ? null : () => _manualCheck(rule, scheduler),
+                  onTap: isChecking ? null : () => _manualCheck(rule, scheduler, lang),
                   borderRadius: BorderRadius.circular(6),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -472,69 +472,54 @@ class _WatchlistPageState extends State<WatchlistPage> {
   }
 
   String _buildConditionSummary(AlertRule rule, [String lang = 'fa']) {
-    final isFa = lang == 'fa';
     switch (rule.conditionType) {
       case AlertConditionType.percentChange:
         if (rule.direction == AlertDirection.bothSides) {
-          return isFa
-              ? 'نوسان قیمت: ±${rule.percent?.toStringAsFixed(1) ?? '0'}% (افزایش یا کاهش)'
-              : 'Price change: ±${rule.percent?.toStringAsFixed(1) ?? '0'}% (Both ways)';
+          return '${AppStrings.get('price_fluctuation', lang)} ±${rule.percent?.toStringAsFixed(1) ?? '0'}%';
         } else if (rule.direction == AlertDirection.above) {
-          return isFa
-              ? 'افزایش قیمت: +${rule.percent?.toStringAsFixed(1) ?? '0'}% (صعودی)'
-              : 'Price increase: +${rule.percent?.toStringAsFixed(1) ?? '0'}% (Upwards)';
+          return '${AppStrings.get('price_surge', lang)} +${rule.percent?.toStringAsFixed(1) ?? '0'}%';
         } else {
-          return isFa
-              ? 'کاهش قیمت: -${rule.percent?.toStringAsFixed(1) ?? '0'}% (نزولی)'
-              : 'Price drop: -${rule.percent?.toStringAsFixed(1) ?? '0'}% (Downwards)';
+          return '${AppStrings.get('price_drop', lang)} -${rule.percent?.toStringAsFixed(1) ?? '0'}%';
         }
       case AlertConditionType.priceThreshold:
         final targetStr = rule.targetPrice != null ? _formatPrice(rule.targetPrice!) : '---';
-        if (isFa) {
-          final dir = rule.direction == AlertDirection.above ? 'عبور به بالاتر از (▲)' : 'سقوط به پایین‌تر از (▼)';
-          return 'قیمت هدف: $dir $targetStr';
-        } else {
-          final dir = rule.direction == AlertDirection.above ? 'Cross above (▲)' : 'Drop below (▼)';
-          return 'Target price: $dir $targetStr';
-        }
+        final dir = rule.direction == AlertDirection.above
+            ? AppStrings.get('price_cross_above', lang)
+            : AppStrings.get('price_cross_below', lang);
+        return '${AppStrings.get('target_price_summary', lang)} $dir $targetStr';
       case AlertConditionType.absolutePriceChange:
         final dir = rule.direction == AlertDirection.bothSides
             ? '±'
             : (rule.direction == AlertDirection.above ? '+' : '-');
-        return isFa
-            ? 'تغییر دلاری: $dir\$${rule.deltaAbsolute?.toStringAsFixed(2) ?? '0'}'
-            : 'Price delta: $dir\$${rule.deltaAbsolute?.toStringAsFixed(2) ?? '0'}';
+        return '${AppStrings.get('price_delta_summary', lang)} $dir\$${rule.deltaAbsolute?.toStringAsFixed(2) ?? '0'}';
       case AlertConditionType.volumeChange:
         final dir = rule.direction == AlertDirection.above ? '+' : '-';
-        return isFa
-            ? 'جهش حجم معاملات: $dir${rule.volumePercent?.toStringAsFixed(1) ?? '0'}%'
-            : 'Volume surge: $dir${rule.volumePercent?.toStringAsFixed(1) ?? '0'}%';
+        return '${AppStrings.get('volume_surge_summary', lang)} $dir${rule.volumePercent?.toStringAsFixed(1) ?? '0'}%';
     }
   }
 
   String _getExchangeDisplayName(String exchangeId, [String lang = 'fa']) {
-    final isFa = lang == 'fa';
     switch (exchangeId.toLowerCase()) {
       case 'binance':
-        return isFa ? 'صرافی بایننس (Binance)' : 'Binance Exchange';
+        return 'Binance';
       case 'nobitex':
-        return isFa ? 'صرافی نوبیتکس (Nobitex)' : 'Nobitex Exchange';
+        return 'Nobitex';
       case 'wallex':
-        return isFa ? 'صرافی والکس (Wallex)' : 'Wallex Exchange';
+        return 'Wallex';
       case 'kucoin':
-        return isFa ? 'صرافی کوکوین (KuCoin)' : 'KuCoin Exchange';
+        return 'KuCoin';
       case 'okx':
-        return isFa ? 'صرافی اوکی‌اکس (OKX)' : 'OKX Exchange';
+        return 'OKX';
       case 'bybit':
-        return isFa ? 'صرافی بای‌بیت (Bybit)' : 'Bybit Exchange';
+        return 'Bybit';
       case 'coingecko':
-        return isFa ? 'کوین‌گکو (CoinGecko)' : 'CoinGecko Aggregator';
+        return 'CoinGecko';
       case 'coinmarketcap':
-        return isFa ? 'کوین‌مارکت‌کپ (CMC)' : 'CoinMarketCap';
+        return 'CoinMarketCap';
       case 'global_stocks':
-        return isFa ? 'بازارهای جهانی (وال‌استریت)' : 'Global Markets (Wall Street)';
+        return AppStrings.get('wallstreet_stocks', lang);
       default:
-        return isFa ? 'صرافی ${exchangeId.toUpperCase()}' : '${exchangeId.toUpperCase()} Exchange';
+        return exchangeId.toUpperCase();
     }
   }
 
@@ -552,19 +537,17 @@ class _WatchlistPageState extends State<WatchlistPage> {
   }
 
   String _formatInterval(int seconds, [String lang = 'fa']) {
-    final isFa = lang == 'fa';
-    if (seconds >= 3600) return isFa ? '${seconds ~/ 3600} ساعت' : '${seconds ~/ 3600} hours';
-    if (seconds >= 60) return isFa ? '${seconds ~/ 60} دقیقه' : '${seconds ~/ 60} min';
-    return isFa ? '$seconds ثانیه' : '$seconds sec';
+    if (seconds >= 3600) return '${seconds ~/ 3600} ${AppStrings.get('hours', lang)}';
+    if (seconds >= 60) return '${seconds ~/ 60} ${AppStrings.get('minutes', lang)}';
+    return '$seconds ${AppStrings.get('seconds', lang)}';
   }
 
   String _formatTimeAgo(DateTime dt, [String lang = 'fa']) {
     final diff = DateTime.now().difference(dt);
-    final isFa = lang == 'fa';
-    if (diff.inSeconds < 10) return isFa ? 'همین الان' : 'Just now';
-    if (diff.inSeconds < 60) return isFa ? '${diff.inSeconds} ثانیه قبل' : '${diff.inSeconds}s ago';
-    if (diff.inMinutes < 60) return isFa ? '${diff.inMinutes} دقیقه قبل' : '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return isFa ? '${diff.inHours} ساعت قبل' : '${diff.inHours}h ago';
-    return isFa ? '${diff.inDays} روز قبل' : '${diff.inDays}d ago';
+    if (diff.inSeconds < 10) return AppStrings.get('just_now', lang);
+    if (diff.inSeconds < 60) return '${diff.inSeconds} ${AppStrings.get('seconds_ago', lang)}';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} ${AppStrings.get('minutes_ago', lang)}';
+    if (diff.inHours < 24) return '${diff.inHours} ${AppStrings.get('hours_ago', lang)}';
+    return '${diff.inDays} ${AppStrings.get('days_ago', lang)}';
   }
 }

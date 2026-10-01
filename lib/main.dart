@@ -103,17 +103,18 @@ class BitcoinCheckerApp extends StatelessWidget {
             builder: (context, _) {
               final isLight = settingsService.settings.themePalette == AppThemePalette.lightGreen ||
                   settingsService.settings.themePalette == AppThemePalette.lightOrange;
-              final isFa = settingsService.settings.language == 'fa';
+              final lang = settingsService.settings.language;
+              final isRtl = AppStrings.isRtl(lang);
               return MaterialApp(
                 title: 'Alarmer',
                 debugShowCheckedModeBanner: false,
                 themeMode: isLight ? ThemeMode.light : ThemeMode.dark,
                 theme: settingsService.settings.buildThemeData(),
                 darkTheme: settingsService.settings.buildThemeData(),
-                locale: Locale(isFa ? 'fa' : 'en'),
+                locale: Locale(lang),
                 builder: (context, child) {
                   return Directionality(
-                    textDirection: isFa ? TextDirection.rtl : TextDirection.ltr,
+                    textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
                     child: child ?? const SizedBox.shrink(),
                   );
                 },

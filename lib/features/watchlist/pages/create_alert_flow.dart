@@ -102,15 +102,15 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
     }
   }
 
-  String _formatCalculatedInterval() {
+  String _formatCalculatedInterval(String lang) {
     final val = int.tryParse(_unitValueController.text.trim()) ?? 1;
     switch (_checkUnit) {
       case CheckUnit.seconds:
-        return '$val ثانیه';
+        return '$val ${AppStrings.get('seconds', lang)}';
       case CheckUnit.minutes:
-        return '$val دقیقه';
+        return '$val ${AppStrings.get('minutes', lang)}';
       case CheckUnit.hours:
-        return '$val ساعت';
+        return '$val ${AppStrings.get('hours', lang)}';
     }
   }
 
@@ -175,7 +175,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
     });
   }
 
-  Future<void> _saveAlert() async {
+  Future<void> _saveAlert(String lang) async {
     final intervalSeconds = _calculateTotalIntervalSeconds();
 
     String exchangeId;
@@ -205,7 +205,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
       targetPrice = double.tryParse(_targetPriceController.text.trim());
       if (targetPrice == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('لطفاً قیمت هدف را وارد کنید')),
+          SnackBar(content: Text(AppStrings.get('target_price_required', lang))),
         );
         return;
       }
@@ -295,7 +295,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
               Icon(Icons.auto_awesome_rounded, size: 14, color: theme.colorScheme.primary),
               const SizedBox(width: 6),
               Text(
-                'گام نخست: انتخاب نوع بازار',
+                AppStrings.get('choose_market_step', lang),
                 style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
               ),
             ],
@@ -323,7 +323,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
           badgeText: AppStrings.get('crypto_market_badge', lang),
           title: AppStrings.get('crypto_market_title', lang),
           description: AppStrings.get('crypto_market_desc', lang),
-          tags: ['بایننس', 'نوبیتکس', 'کوکوین', 'والکس', 'CoinGecko'],
+          tags: ['Binance', 'Nobitex', 'KuCoin', 'Wallex', 'CoinGecko'],
           buttonText: AppStrings.get('crypto_market_cta', lang),
           buttonColor: theme.colorScheme.primary,
           onTap: () {
@@ -346,7 +346,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
           badgeText: AppStrings.get('macro_market_badge', lang),
           title: AppStrings.get('macro_market_title', lang),
           description: AppStrings.get('macro_market_desc', lang),
-          tags: ['اوراق US10Y', 'یورو/دلار', 'سهام انویدیا و اپل', 'انس طلا'],
+          tags: ['US10Y', 'EUR/USD', 'NVDA', 'Gold (XAU)', 'S&P 500'],
           buttonText: AppStrings.get('macro_market_cta', lang),
           buttonColor: theme.colorScheme.secondary,
           onTap: () {
@@ -569,7 +569,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                             Text(ex.name, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface)),
                             const SizedBox(height: 2),
                             Text(
-                              '${ex.countryBadge} · جفت‌ارز مبنا: ${ex.defaultCounterCurrency}',
+                              '${ex.countryBadge} · ${ex.defaultCounterCurrency}',
                               style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.55)),
                             ),
                           ],
@@ -612,7 +612,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
               children: [
                 Expanded(
                   child: Text(
-                    'صرافی: ${_selectedExchange?.name} (${_exchangePairs.length} جفت‌ارز)',
+                    '${AppStrings.get('exchange', lang)}: ${_selectedExchange?.name} (${_exchangePairs.length} ${AppStrings.get('pair', lang)})',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: theme.colorScheme.onSurface),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -737,12 +737,12 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             children: [
-              _buildMacroChip('همه نمادها', 'all', theme),
-              _buildMacroChip('🏛️ اوراق قرضه آمریکا', 'bonds', theme),
-              _buildMacroChip('💱 فارکس (ارزها)', 'forex', theme),
-              _buildMacroChip('🥇 طلا و فلزات', 'metals', theme),
-              _buildMacroChip('📈 سهام وال‌استریت', 'stocks', theme),
-              _buildMacroChip('🌐 شاخص‌های جهانی', 'index', theme),
+              _buildMacroChip(AppStrings.get('all_symbols', lang), 'all', theme),
+              _buildMacroChip(AppStrings.get('us_bonds', lang), 'bonds', theme),
+              _buildMacroChip(AppStrings.get('forex_pairs', lang), 'forex', theme),
+              _buildMacroChip(AppStrings.get('gold_metals', lang), 'metals', theme),
+              _buildMacroChip(AppStrings.get('wallstreet_stocks', lang), 'stocks', theme),
+              _buildMacroChip(AppStrings.get('global_indices', lang), 'index', theme),
             ],
           ),
         ),
@@ -755,6 +755,9 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
             itemBuilder: (context, index) {
               final asset = filtered[index];
               final price = (asset['price'] as num).toDouble();
+              final isFa = lang == 'fa' || lang == 'ar' || lang == 'ckb';
+              final displayName = isFa ? (asset['nameFa'] as String) : (asset['name'] as String);
+
               return InkWell(
                 onTap: () => _onMacroAssetChosen(asset),
                 borderRadius: BorderRadius.circular(14),
@@ -783,12 +786,12 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              asset['nameFa'] as String,
+                              displayName,
                               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '${asset['symbol']} · دسته: ${asset['cat']}',
+                              '${asset['symbol']} · ${asset['cat']}',
                               style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.55)),
                             ),
                           ],
@@ -844,9 +847,10 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
   }
 
   Widget _buildConditionAndFrequencyStep(ThemeData theme, String lang) {
+    final isFa = lang == 'fa' || lang == 'ar' || lang == 'ckb';
     final assetName = _flowType == MarketFlowType.crypto
         ? _selectedPair?.displayName ?? ''
-        : _selectedMacroAsset?['nameFa'] ?? '';
+        : (isFa ? _selectedMacroAsset?['nameFa'] : _selectedMacroAsset?['name']) ?? '';
 
     return ListView(
       padding: const EdgeInsets.all(20),
@@ -940,7 +944,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
         ),
         const SizedBox(height: 8),
         Text(
-          '⏱️ بررسی قیمت هر ${_formatCalculatedInterval()} یک‌بار در پس‌زمینه انجام خواهد شد.',
+          '${AppStrings.get('interval_prefix', lang)}${_formatCalculatedInterval(lang)}${AppStrings.get('interval_suffix', lang)}',
           style: TextStyle(fontSize: 11, color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 20),
@@ -1042,7 +1046,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
             style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'monospace', color: theme.colorScheme.onSurface),
             decoration: InputDecoration(
               labelText: AppStrings.get('percent_label', lang),
-              hintText: 'مثال: 2.5',
+              hintText: '2.5',
               filled: true,
               fillColor: theme.colorScheme.surface,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.dividerColor)),
@@ -1052,15 +1056,15 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
 
         if (_conditionType == AlertConditionType.priceThreshold) ...[
           Text(
-            AppStrings.get('price_direction', lang),
+            AppStrings.get('price_cross_direction', lang),
             style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
           ),
           const SizedBox(height: 6),
           Row(
             children: [
-              _buildDirectionChip(AppStrings.get('above_only', lang), AlertDirection.above, theme),
+              _buildDirectionChip(AppStrings.get('above_target', lang), AlertDirection.above, theme),
               const SizedBox(width: 8),
-              _buildDirectionChip(AppStrings.get('below_only', lang), AlertDirection.below, theme),
+              _buildDirectionChip(AppStrings.get('below_target', lang), AlertDirection.below, theme),
             ],
           ),
           const SizedBox(height: 12),
@@ -1070,7 +1074,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
             style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'monospace', color: theme.colorScheme.onSurface),
             decoration: InputDecoration(
               labelText: AppStrings.get('target_price_label', lang),
-              hintText: 'مثال: 95000',
+              hintText: '95000',
               filled: true,
               fillColor: theme.colorScheme.surface,
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.dividerColor)),
@@ -1083,7 +1087,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: _saveAlert,
+            onPressed: () => _saveAlert(lang),
             style: ElevatedButton.styleFrom(
               backgroundColor: theme.colorScheme.primary,
               foregroundColor: Colors.white,

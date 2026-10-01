@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../../core/constants/strings.dart';
 import '../../../../core/localization/app_strings.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../settings/services/settings_service.dart';
@@ -84,11 +83,11 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
             ),
             child: Row(
               children: [
-                _buildFilterChip(HistoryFilter.all, S.filterAll, theme),
+                _buildFilterChip(HistoryFilter.all, AppStrings.get('filter_all', lang), theme),
                 const SizedBox(width: AppTokens.space8),
-                _buildFilterChip(HistoryFilter.triggered, S.filterTriggered, theme),
+                _buildFilterChip(HistoryFilter.triggered, AppStrings.get('filter_triggered', lang), theme),
                 const SizedBox(width: AppTokens.space8),
-                _buildFilterChip(HistoryFilter.suppressed, S.filterSuppressed, theme),
+                _buildFilterChip(HistoryFilter.suppressed, AppStrings.get('filter_suppressed', lang), theme),
               ],
             ),
           ),
@@ -119,7 +118,7 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
                               ),
                               const SizedBox(height: AppTokens.space16),
                               Text(
-                                S.noHistoryTitle,
+                                AppStrings.get('no_history_title', lang),
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -128,7 +127,7 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
                               ),
                               const SizedBox(height: AppTokens.space8),
                               Text(
-                                S.noHistorySubtitle,
+                                AppStrings.get('no_history_desc', lang),
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 12,
@@ -206,7 +205,6 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header: Pair & Timestamp
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -233,7 +231,7 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
                       style: TextStyle(
                         color: theme.colorScheme.primary,
                         fontSize: 10,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
@@ -251,7 +249,6 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
           ),
           const SizedBox(height: AppTokens.space6),
 
-          // Message & Triggered Price
           Text(
             log.message,
             style: TextStyle(
@@ -261,7 +258,6 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
           ),
           const SizedBox(height: AppTokens.space6),
 
-          // Price Tag
           Row(
             children: [
               Text(
