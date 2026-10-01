@@ -491,6 +491,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final settingsService = context.watch<SettingsService>();
     final settings = settingsService.settings;
     final lang = settings.language;
+    final isFa = lang == 'fa' || lang == 'ar' || lang == 'ckb';
     final theme = Theme.of(context);
 
     final currentLangObj = _supportedLanguages.firstWhere(
