@@ -59,8 +59,12 @@ class _SettingsPageState extends State<SettingsPage> {
       });
       if (status.isGranted) {
         final theme = Theme.of(context);
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             content: Text(AppStrings.get('battery_exempt_success', lang)),
             backgroundColor: theme.colorScheme.surfaceContainerHighest,
           ),
@@ -172,10 +176,12 @@ class _SettingsPageState extends State<SettingsPage> {
     );
 
     if (context.mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AppStrings.get('test_alert_body', lang)),
           backgroundColor: theme.colorScheme.surfaceContainerHighest,
+          behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 3),
         ),
       );
@@ -189,11 +195,13 @@ class _SettingsPageState extends State<SettingsPage> {
     await Clipboard.setData(ClipboardData(text: jsonString));
 
     if (context.mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AppStrings.get('backup_copied', lang)),
           backgroundColor: theme.colorScheme.surfaceContainerHighest,
-          duration: const Duration(seconds: 4),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
         ),
       );
     }
@@ -263,19 +271,25 @@ class _SettingsPageState extends State<SettingsPage> {
         final repo = context.read<JsonAlertRuleRepository>();
         final count = await repo.importAlertsFromJson(jsonString);
         if (context.mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('🎉 $count ${AppStrings.get('restore_success', lang)}'),
               backgroundColor: theme.colorScheme.surfaceContainerHighest,
+              behavior: SnackBarBehavior.floating,
+              duration: const Duration(seconds: 3),
             ),
           );
         }
       } catch (e) {
         if (context.mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Format error in JSON backup file.'),
               backgroundColor: AppTokens.negative,
+              behavior: SnackBarBehavior.floating,
+              duration: Duration(seconds: 3),
             ),
           );
         }
@@ -327,10 +341,13 @@ class _SettingsPageState extends State<SettingsPage> {
       final repo = context.read<NotificationRepository>();
       await repo.clearAllLogs();
       if (context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(AppStrings.get('clear_history_success', lang)),
             backgroundColor: theme.colorScheme.surfaceContainerHighest,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
           ),
         );
       }

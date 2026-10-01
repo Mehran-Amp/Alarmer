@@ -9,7 +9,7 @@ import 'condition_evaluator.dart';
 
 /// Personal Price-Alert Polling Scheduler Service.
 /// Wakes up on a 1-second fine tick, checks which individual alert rules are due
-/// based on each rule's specific `checkIntervalSeconds`, fetches prices via REST on demand,
+/// based on each rule's specific `checkIntervalSeconds`, fetches prices via pure REST on demand,
 /// evaluates conditions, triggers notifications, and updates baseline prices for recurring rules.
 class SchedulerService {
   final JsonAlertRuleRepository _alertRuleRepository;
@@ -60,13 +60,16 @@ class SchedulerService {
     }
   }
 
-  Future<void> _evaluateSingleRule(AlertRule rule, DateTime now) async {
+  Future<bool> _evaluateSingleRule(AlertRule rule, DateTime now) async {
     final exchange = _exchangeRegistry.get(rule.exchangeId);
-    if (exchange == null) return;
+    if (exchange == null) return false;
 
     try {
       // 1. Fetch current price & volume via pure REST
       final ticker = await exchange.fetchTicker(rule.pair);
+
+      // Never process non-positive or corrupted prices
+      if (ticker.lastPrice <= 0) return false;
 
       // 2. Evaluate condition synchronously (pure functions, zero I/O)
       final result = ConditionEvaluator.evaluate(
@@ -75,7 +78,7 @@ class SchedulerService {
         currentVolume: ticker.volume24h,
       );
 
-      // 3. Prepare updated rule state
+      // 3. Prepare updated rule state with authentic live price
       var updatedRule = rule.copyWith(
         lastCheckedAt: now,
         lastCheckedPrice: ticker.lastPrice,
@@ -120,14 +123,16 @@ class SchedulerService {
 
       // 4. Save updated rule to repository
       await _alertRuleRepository.saveRule(updatedRule);
+      return true;
     } catch (_) {
-      // Skip on temporary network failure, will re-check on next interval
+      // On offline / network failure: keep the last known valid price intact in repository
+      return false;
     }
   }
 
   /// Trigger an immediate manual check for a specific rule
-  Future<void> checkRuleNow(AlertRule rule) async {
-    await _evaluateSingleRule(rule, DateTime.now());
+  Future<bool> checkRuleNow(AlertRule rule) async {
+    return await _evaluateSingleRule(rule, DateTime.now());
   }
 
   /// Stops the scheduler

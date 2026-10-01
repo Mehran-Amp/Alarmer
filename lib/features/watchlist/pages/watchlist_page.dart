@@ -38,16 +38,31 @@ class _WatchlistPageState extends State<WatchlistPage> {
   Future<void> _manualCheck(AlertRule rule, SchedulerService scheduler, String lang) async {
     setState(() => _checkingRuleUuids.add(rule.uuid));
     try {
-      await scheduler.checkRuleNow(rule);
+      final success = await scheduler.checkRuleNow(rule);
       if (mounted) {
         final theme = Theme.of(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('${AppStrings.get('check_price_done', lang)}${rule.pair.displayName}'),
-            backgroundColor: theme.colorScheme.surfaceContainerHighest,
-            duration: const Duration(seconds: 2),
-          ),
-        );
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              content: Text('${AppStrings.get('check_price_done', lang)}${rule.pair.displayName}'),
+              backgroundColor: theme.colorScheme.surfaceContainerHighest,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              content: Text(AppStrings.get('offline_error', lang)),
+              backgroundColor: theme.colorScheme.surfaceContainerHighest,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
       }
     } finally {
       if (mounted) {
@@ -191,14 +206,21 @@ class _WatchlistPageState extends State<WatchlistPage> {
       ),
       onDismissed: (_) {
         repository.deleteRule(rule.uuid);
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            duration: const Duration(seconds: 4),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             content: Text('${AppStrings.get('alert_deleted_msg', lang)}${rule.pair.displayName}'),
             backgroundColor: theme.colorScheme.surfaceContainerHighest,
             action: SnackBarAction(
               label: AppStrings.get('undo_action', lang),
               textColor: theme.colorScheme.primary,
-              onPressed: () => repository.saveRule(rule),
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                repository.saveRule(rule);
+              },
             ),
           ),
         );

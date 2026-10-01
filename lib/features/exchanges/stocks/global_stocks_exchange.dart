@@ -6,7 +6,7 @@ import '../base/exchange_category.dart';
 import '../base/models/market_ticker.dart';
 import '../base/models/price_snapshot.dart';
 
-/// Global Stock Markets & Commodities Exchange Adapter (NYSE, NASDAQ, Gold, Indices)
+/// Global Stock Markets & Commodities Exchange Adapter (NYSE, NASDAQ, Gold, Indices, Bonds)
 /// Powered by institutional real-time Yahoo Finance Chart API & Finnhub endpoints.
 class GlobalStocksExchange implements Exchange {
   final http.Client _client;
@@ -44,8 +44,8 @@ class GlobalStocksExchange implements Exchange {
     {'symbol': 'NVDA', 'name': 'NVIDIA Corporation', 'nameFa': 'انویدیا (هوش مصنوعی)', 'cat': 'Tech', 'price': 138.25},
     {'symbol': 'AAPL', 'name': 'Apple Inc.', 'nameFa': 'اپل', 'cat': 'Tech', 'price': 228.50},
     {'symbol': 'MSFT', 'name': 'Microsoft Corporation', 'nameFa': 'مایکروسافت', 'cat': 'Tech', 'price': 428.10},
-    {'symbol': 'TSLA', 'name': 'Tesla Inc.', 'nameFa': 'تسلا', 'cat': 'Auto/Tech', 'price': 255.40},
-    {'symbol': 'AMZN', 'name': 'Amazon.com Inc.', 'nameFa': 'آمازون', 'cat': 'Retail/Cloud', 'price': 186.70},
+    {'symbol': 'TSLA', 'name': 'Tesla Inc.', 'nameFa': 'تسلا', 'cat': 'Tech', 'price': 255.40},
+    {'symbol': 'AMZN', 'name': 'Amazon.com Inc.', 'nameFa': 'آمازون', 'cat': 'Tech', 'price': 186.70},
     {'symbol': 'GOOGL', 'name': 'Alphabet Inc. (Google)', 'nameFa': 'گوگل (آلفابت)', 'cat': 'Tech', 'price': 165.30},
     {'symbol': 'META', 'name': 'Meta Platforms (Facebook)', 'nameFa': 'متا (فیسبوک)', 'cat': 'Tech', 'price': 585.20},
     {'symbol': 'AVGO', 'name': 'Broadcom Inc.', 'nameFa': 'برودکام', 'cat': 'Semiconductor', 'price': 176.80},
@@ -116,52 +116,45 @@ class GlobalStocksExchange implements Exchange {
   @override
   Future<MarketTicker> fetchTicker(CurrencyPair pair) async {
     final cleanSymbol = pair.baseCurrency;
-    try {
-      final url = Uri.parse(
-        'https://query1.finance.yahoo.com/v8/finance/chart/$cleanSymbol?interval=1m&range=1d',
-      );
-      final response = await _client.get(url, headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      });
+    
+    // 1. Try Yahoo Finance primary and backup endpoints
+    final hosts = ['query1.finance.yahoo.com', 'query2.finance.yahoo.com'];
+    
+    for (final host in hosts) {
+      try {
+        final url = Uri.parse('https://$host/v8/finance/chart/$cleanSymbol?interval=1m&range=1d');
+        final response = await _client.get(url, headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        }).timeout(const Duration(seconds: 8));
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final result = data['chart']?['result']?[0];
-        if (result != null) {
-          final meta = result['meta'];
-          final double regularPrice = (meta['regularMarketPrice'] as num).toDouble();
-          final double high = (meta['regularMarketDayHigh'] as num?)?.toDouble() ?? regularPrice;
-          final double low = (meta['regularMarketDayLow'] as num?)?.toDouble() ?? regularPrice;
-          final double volume = (meta['regularMarketVolume'] as num?)?.toDouble() ?? 0.0;
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final result = data['chart']?['result']?[0];
+          if (result != null) {
+            final meta = result['meta'];
+            final double regularPrice = (meta['regularMarketPrice'] as num).toDouble();
+            final double high = (meta['regularMarketDayHigh'] as num?)?.toDouble() ?? regularPrice;
+            final double low = (meta['regularMarketDayLow'] as num?)?.toDouble() ?? regularPrice;
+            final double volume = (meta['regularMarketVolume'] as num?)?.toDouble() ?? 0.0;
 
-          return MarketTicker(
-            exchangeId: id,
-            pair: pair,
-            lastPrice: regularPrice,
-            volume24h: volume,
-            high24h: high,
-            low24h: low,
-            timestamp: DateTime.now(),
-          );
+            if (regularPrice > 0) {
+              return MarketTicker(
+                exchangeId: id,
+                pair: pair,
+                lastPrice: regularPrice,
+                volume24h: volume,
+                high24h: high,
+                low24h: low,
+                timestamp: DateTime.now(),
+              );
+            }
+          }
         }
-      }
-    } catch (_) {}
+      } catch (_) {}
+    }
 
-    // Fallback: match from local predefined baseline
-    final matched = predefinedStocks.firstWhere(
-      (s) => s['symbol'] == cleanSymbol,
-      orElse: () => {'price': 100.0},
-    );
-    final fallbackPrice = (matched['price'] as num).toDouble();
-
-    return MarketTicker(
-      exchangeId: id,
-      pair: pair,
-      lastPrice: fallbackPrice,
-      volume24h: 1000000.0,
-      high24h: fallbackPrice * 1.02,
-      low24h: fallbackPrice * 0.98,
-      timestamp: DateTime.now(),
-    );
+    // If offline or unreachable, throw exception so the system NEVER generates fake prices.
+    // The previous valid real price will remain cached in storage.
+    throw Exception('Live market connection unavailable for $cleanSymbol. Please check internet connection.');
   }
 }

@@ -5,7 +5,8 @@ import '../base/exchange_category.dart';
 import '../base/models/market_ticker.dart';
 import '../base/models/price_snapshot.dart';
 
-/// Nobitex Exchange Adapter (Popular Iranian Crypto Exchange)
+/// Nobitex Exchange Adapter (Leading Iranian Crypto Exchange)
+/// Direct REST API integration with real-time live price endpoints.
 class NobitexExchange implements Exchange {
   final Dio _dio;
 
@@ -32,19 +33,64 @@ class NobitexExchange implements Exchange {
   @override
   String get defaultCounterCurrency => 'USDT';
 
+  static const List<String> _popularCurrencies = [
+    'BTC', 'ETH', 'SOL', 'USDT', 'TON', 'XRP', 'DOGE', 'TRX', 'SHIB', 'PEPE',
+    'ADA', 'BNB', 'NOT', 'SUI', 'AVAX', 'NEAR', 'POL', 'LINK', 'DOT', 'BCH',
+    'LTC', 'UNI', 'ATOM', 'FET', 'APT', 'ARB', 'OP', 'TIA', 'INJ', 'FTM',
+    'ALGO', 'ICP', 'ETC', 'XLM', 'FIL', 'SAND', 'MANA', 'RENDER', 'GALA',
+    'FLOKI', 'BONK', 'WIF', 'PENDLE', 'JUP', 'PYTH', 'ENA', 'STRK', 'STX', 'KAS',
+  ];
+
   @override
   Future<List<CurrencyPair>> fetchCurrencyPairs() async {
-    return [
-      const CurrencyPair(baseCurrency: 'BTC', counterCurrency: 'USDT', marketSymbol: 'btc-usdt'),
-      const CurrencyPair(baseCurrency: 'ETH', counterCurrency: 'USDT', marketSymbol: 'eth-usdt'),
-      const CurrencyPair(baseCurrency: 'SOL', counterCurrency: 'USDT', marketSymbol: 'sol-usdt'),
-      const CurrencyPair(baseCurrency: 'XRP', counterCurrency: 'USDT', marketSymbol: 'xrp-usdt'),
-      const CurrencyPair(baseCurrency: 'DOGE', counterCurrency: 'USDT', marketSymbol: 'doge-usdt'),
-      const CurrencyPair(baseCurrency: 'TON', counterCurrency: 'USDT', marketSymbol: 'ton-usdt'),
-      const CurrencyPair(baseCurrency: 'TRX', counterCurrency: 'USDT', marketSymbol: 'trx-usdt'),
-      const CurrencyPair(baseCurrency: 'SHIB', counterCurrency: 'USDT', marketSymbol: 'shib-usdt'),
-      const CurrencyPair(baseCurrency: 'PEPE', counterCurrency: 'USDT', marketSymbol: 'pepe-usdt'),
-    ];
+    try {
+      final response = await _dio.post('/market/stats');
+      if (response.data is Map && response.data['stats'] is Map) {
+        final stats = response.data['stats'] as Map<String, dynamic>;
+        final pairs = <CurrencyPair>[];
+
+        for (final key in stats.keys) {
+          final parts = key.split('-');
+          if (parts.length == 2) {
+            final base = parts[0].toUpperCase();
+            final counter = parts[1].toUpperCase() == 'RLS' ? 'TMN' : parts[1].toUpperCase();
+            pairs.add(CurrencyPair(
+              baseCurrency: base,
+              counterCurrency: counter,
+              marketSymbol: key,
+            ));
+          }
+        }
+
+        if (pairs.isNotEmpty) {
+          // Sort USDT pairs first, then popular coins
+          pairs.sort((a, b) {
+            if (a.counterCurrency == 'USDT' && b.counterCurrency != 'USDT') return -1;
+            if (a.counterCurrency != 'USDT' && b.counterCurrency == 'USDT') return 1;
+            return a.baseCurrency.compareTo(b.baseCurrency);
+          });
+          return pairs;
+        }
+      }
+    } catch (_) {}
+
+    // Predefined robust list if offline or stats endpoint is busy
+    final list = <CurrencyPair>[];
+    for (final sym in _popularCurrencies) {
+      if (sym != 'USDT') {
+        list.add(CurrencyPair(
+          baseCurrency: sym,
+          counterCurrency: 'USDT',
+          marketSymbol: '${sym.toLowerCase()}-usdt',
+        ));
+        list.add(CurrencyPair(
+          baseCurrency: sym,
+          counterCurrency: 'TMN',
+          marketSymbol: '${sym.toLowerCase()}-rls',
+        ));
+      }
+    }
+    return list;
   }
 
   @override
@@ -59,27 +105,49 @@ class NobitexExchange implements Exchange {
 
   @override
   Future<MarketTicker> fetchTicker(CurrencyPair pair) async {
+    final dst = pair.counterCurrency.toUpperCase() == 'TMN' ? 'rls' : pair.counterCurrency.toLowerCase();
+    final src = pair.baseCurrency.toLowerCase();
+    final pairKey = '$src-$dst';
+
     try {
-      final src = '${pair.baseCurrency}-${pair.counterCurrency}'.toLowerCase();
-      final response = await _dio.post('/market/stats', data: {'srcCurrency': pair.baseCurrency.toLowerCase(), 'dstCurrency': pair.counterCurrency.toLowerCase()});
-      final data = response.data['stats']?[src] as Map<String, dynamic>?;
-      final price = double.tryParse(data?['latest']?.toString() ?? '0') ?? 0.0;
-      final vol = double.tryParse(data?['volumeSrc']?.toString() ?? '0') ?? 0.0;
+      final response = await _dio.post(
+        '/market/stats',
+        data: {'srcCurrency': src, 'dstCurrency': dst},
+      );
+
+      final stats = response.data?['stats'] as Map<String, dynamic>?;
+      final data = stats?[pairKey] as Map<String, dynamic>? ?? stats?['$src-${pair.counterCurrency.toLowerCase()}'] as Map<String, dynamic>?;
+
+      if (data == null) {
+        throw Exception('Market data not found on Nobitex for $pairKey');
+      }
+
+      var price = double.tryParse(data['latest']?.toString() ?? '0') ?? 0.0;
+      // If price is in RLS (Rials), convert to Toman by dividing by 10 for clean display
+      if (dst == 'rls' && price > 0) {
+        price = price / 10.0;
+      }
+
+      final vol = double.tryParse(data['volumeSrc']?.toString() ?? '0') ?? 0.0;
+      final high = double.tryParse(data['dayHigh']?.toString() ?? '0') ?? price;
+      final low = double.tryParse(data['dayLow']?.toString() ?? '0') ?? price;
+
+      if (price <= 0) {
+        throw Exception('Invalid price received from Nobitex ($price)');
+      }
+
       return MarketTicker(
         exchangeId: id,
         pair: pair,
         lastPrice: price,
         volume24h: vol,
+        high24h: dst == 'rls' ? high / 10.0 : high,
+        low24h: dst == 'rls' ? low / 10.0 : low,
         timestamp: DateTime.now(),
       );
-    } catch (_) {
-      return MarketTicker(
-        exchangeId: id,
-        pair: pair,
-        lastPrice: 0.0,
-        volume24h: 0.0,
-        timestamp: DateTime.now(),
-      );
+    } catch (e) {
+      // Throw exception to indicate network/fetch failure rather than generating fake prices
+      throw Exception('Nobitex Live Connection Error for ${pair.displayName}: $e');
     }
   }
 }

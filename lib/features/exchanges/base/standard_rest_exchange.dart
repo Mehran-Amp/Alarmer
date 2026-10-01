@@ -6,6 +6,7 @@ import '../base/models/market_ticker.dart';
 import '../base/models/price_snapshot.dart';
 
 /// Configurable Standard REST Exchange Adapter (inspired by BitcoinChecker DataModule)
+/// Connects to verified real-time REST endpoints. Never fabricates fake prices.
 class StandardRestExchange implements Exchange {
   @override
   final String id;
@@ -37,6 +38,10 @@ class StandardRestExchange implements Exchange {
             Dio(BaseOptions(
               connectTimeout: const Duration(seconds: 10),
               receiveTimeout: const Duration(seconds: 10),
+              headers: {
+                'Accept': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (compatible; BitcoinChecker/1.0)',
+              },
             ));
 
   @override
@@ -44,9 +49,9 @@ class StandardRestExchange implements Exchange {
     if (pairsUrl != null) {
       try {
         final response = await _dio.get(pairsUrl!);
-        if (response.data is List) {
-          final list = response.data as List;
-          return list.take(150).map((item) {
+        final data = response.data;
+        if (data is List) {
+          return data.take(150).map((item) {
             if (item is Map) {
               final base = (item['base'] ?? item['baseCurrency'] ?? item['base_currency'] ?? 'BTC').toString().toUpperCase();
               final target = (item['target'] ?? item['quoteCurrency'] ?? item['quote_currency'] ?? defaultCounterCurrency).toString().toUpperCase();
@@ -55,6 +60,18 @@ class StandardRestExchange implements Exchange {
             }
             return CurrencyPair(baseCurrency: 'BTC', counterCurrency: defaultCounterCurrency, marketSymbol: 'BTC$defaultCounterCurrency');
           }).toList();
+        } else if (data is Map && data['result'] is Map) {
+          final map = data['result'] as Map<String, dynamic>;
+          final pairs = <CurrencyPair>[];
+          for (final entry in map.entries) {
+            final val = entry.value as Map<String, dynamic>?;
+            final base = val?['base']?.toString().toUpperCase() ?? '';
+            final quote = val?['quote']?.toString().toUpperCase() ?? '';
+            if (base.isNotEmpty && quote.isNotEmpty) {
+              pairs.add(CurrencyPair(baseCurrency: base, counterCurrency: quote, marketSymbol: entry.key));
+            }
+          }
+          if (pairs.isNotEmpty) return pairs;
         }
       } catch (_) {}
     }
@@ -73,7 +90,7 @@ class StandardRestExchange implements Exchange {
 
   @override
   Future<MarketTicker> fetchTicker(CurrencyPair pair) async {
-    // If specific tickerUrlTemplate provided, query it
+    // 1. If specific tickerUrlTemplate provided, query it
     if (tickerUrlTemplate != null) {
       try {
         final url = tickerUrlTemplate!
@@ -90,8 +107,14 @@ class StandardRestExchange implements Exchange {
         double vol = 0.0;
 
         if (data is Map<String, dynamic>) {
-          price = double.tryParse(data['lastPrice']?.toString() ?? data['last']?.toString() ?? data['price']?.toString() ?? data['close']?.toString() ?? '0') ?? 0.0;
-          vol = double.tryParse(data['volume']?.toString() ?? data['vol']?.toString() ?? data['volume24h']?.toString() ?? '0') ?? 0.0;
+          // Check common API response formats (Binance, Gate, MEXC, KuCoin, etc.)
+          final d = data['data'] is Map ? data['data'] as Map<String, dynamic> : data;
+          price = double.tryParse(d['lastPrice']?.toString() ?? d['last']?.toString() ?? d['price']?.toString() ?? d['close']?.toString() ?? '0') ?? 0.0;
+          vol = double.tryParse(d['volume']?.toString() ?? d['vol']?.toString() ?? d['volume24h']?.toString() ?? d['quoteVolume']?.toString() ?? '0') ?? 0.0;
+        } else if (data is List && data.isNotEmpty && data.first is Map) {
+          final first = data.first as Map<String, dynamic>;
+          price = double.tryParse(first['last']?.toString() ?? first['price']?.toString() ?? first['lastPrice']?.toString() ?? '0') ?? 0.0;
+          vol = double.tryParse(first['volume']?.toString() ?? first['quote_volume']?.toString() ?? '0') ?? 0.0;
         }
 
         if (price > 0) {
@@ -106,27 +129,25 @@ class StandardRestExchange implements Exchange {
       } catch (_) {}
     }
 
-    // Fallback: Query CoinGecko or Binance price proxy for realistic snapshot
+    // 2. Real fallback: Query Binance public live ticker for the asset pair
     try {
-      final binanceSymbol = '${pair.baseCurrency}${pair.counterCurrency == "USD" ? "USDT" : pair.counterCurrency}'.toUpperCase();
+      final quote = pair.counterCurrency == 'USD' ? 'USDT' : pair.counterCurrency;
+      final binanceSymbol = '${pair.baseCurrency}$quote'.toUpperCase();
       final res = await _dio.get('https://api.binance.com/api/v3/ticker/24hr?symbol=$binanceSymbol');
       final p = double.tryParse(res.data['lastPrice']?.toString() ?? '0') ?? 0.0;
       final v = double.tryParse(res.data['quoteVolume']?.toString() ?? '0') ?? 0.0;
-      return MarketTicker(
-        exchangeId: id,
-        pair: pair,
-        lastPrice: p,
-        volume24h: v,
-        timestamp: DateTime.now(),
-      );
-    } catch (_) {
-      return MarketTicker(
-        exchangeId: id,
-        pair: pair,
-        lastPrice: 0.0,
-        volume24h: 0.0,
-        timestamp: DateTime.now(),
-      );
-    }
+      if (p > 0) {
+        return MarketTicker(
+          exchangeId: id,
+          pair: pair,
+          lastPrice: p,
+          volume24h: v,
+          timestamp: DateTime.now(),
+        );
+      }
+    } catch (_) {}
+
+    // 3. Throw exception if offline or live connection fails - NEVER return fake 0 or fabricated price
+    throw Exception('Connection error: Unable to fetch live price for ${pair.displayName} on $name');
   }
 }

@@ -168,13 +168,32 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
     }
   }
 
-  void _onMacroAssetChosen(Map<String, dynamic> asset) {
+  Future<void> _onMacroAssetChosen(Map<String, dynamic> asset) async {
     setState(() {
       _selectedMacroAsset = asset;
-      _currentPrice = (asset['price'] as num).toDouble();
-      _targetPriceController.text = _currentPrice!.toStringAsFixed(2);
       _step = 2;
+      _isLoadingPrice = true;
     });
+
+    final sym = asset['symbol'] as String;
+    final pair = CurrencyPair(baseCurrency: sym, counterCurrency: 'USD', marketSymbol: '$sym/USD');
+    try {
+      final snapshot = await widget.registry.fetchSnapshotFrom('global_stocks', pair);
+      if (snapshot != null && snapshot.price > 0 && mounted) {
+        setState(() {
+          _currentPrice = snapshot.price;
+          _targetPriceController.text = snapshot.price.toStringAsFixed(2);
+          _isLoadingPrice = false;
+        });
+        return;
+      }
+    } catch (_) {}
+
+    if (mounted) {
+      setState(() {
+        _isLoadingPrice = false;
+      });
+    }
   }
 
   Future<void> _saveAlert(String lang) async {
@@ -206,8 +225,13 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
     } else {
       targetPrice = double.tryParse(_targetPriceController.text.trim());
       if (targetPrice == null) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppStrings.get('target_price_required', lang))),
+          SnackBar(
+            content: Text(AppStrings.get('target_price_required', lang)),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+          ),
         );
         return;
       }

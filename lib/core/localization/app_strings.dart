@@ -129,6 +129,8 @@ class AppStrings {
       'volume_surge_summary': 'جهش حجم معاملات:',
       'interval_prefix': '⏱️ بررسی قیمت هر ',
       'interval_suffix': ' یک‌بار در پس‌زمینه انجام خواهد شد.',
+      'offline_error': 'عدم دسترسی به اینترنت. آخرین قیمت واقعی نگه‌داری می‌شود.',
+      'offline_badge': 'آفلاین (قیمت قبلی)',
     },
 
     // 2. ENGLISH (English - LTR)
@@ -251,6 +253,8 @@ class AppStrings {
       'volume_surge_summary': 'Volume surge:',
       'interval_prefix': '⏱️ Automated price check runs every ',
       'interval_suffix': ' in background.',
+      'offline_error': 'No internet connection. Keeping last recorded authentic price.',
+      'offline_badge': 'Offline (Last Price)',
     },
 
     // 3. KURDISH SORANI (کوردی سۆرانی - RTL)
