@@ -140,7 +140,6 @@ class SoundManager {
           category: AVAudioSessionCategory.playback,
           options: const {
             AVAudioSessionOptions.duckOthers,
-            AVAudioSessionOptions.defaultToSpeaker,
           },
         ),
       ));

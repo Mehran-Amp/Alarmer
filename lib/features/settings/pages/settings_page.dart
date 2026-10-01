@@ -214,21 +214,40 @@ class _SettingsPageState extends State<SettingsPage> {
                       final isPlaying = SoundManager().isSoundPlaying(preset.id);
                       final title = isFa ? preset.titleFa : preset.titleEn;
 
-                      return Material(
-                        color: Colors.transparent,
-                        child: ListTile(
-                          leading: Text(preset.icon, style: const TextStyle(fontSize: 22)),
-                          title: Text(
-                            title,
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 13,
-                              color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface,
-                            ),
+                      return InkWell(
+                        onTap: () async {
+                          await SoundManager().playPreset(preset.id, volume: settingsService.settings.alarmVolume);
+                          await settingsService.setSoundName(preset.id);
+                          if (ctx.mounted) {
+                            setModalState(() {});
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? theme.colorScheme.primary.withValues(alpha: 0.1)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(12),
+                            border: isSelected
+                                ? Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.35))
+                                : null,
                           ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
+                          child: Row(
                             children: [
+                              Text(preset.icon, style: const TextStyle(fontSize: 22)),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  title,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface,
+                                  ),
+                                ),
+                              ),
                               IconButton(
                                 icon: Icon(
                                   isPlaying ? Icons.stop_circle_rounded : Icons.play_circle_filled_rounded,
@@ -248,15 +267,6 @@ class _SettingsPageState extends State<SettingsPage> {
                                 Icon(Icons.check_circle_rounded, color: theme.colorScheme.primary, size: 22),
                             ],
                           ),
-                          selected: isSelected,
-                          selectedTileColor: theme.colorScheme.primary.withValues(alpha: 0.08),
-                          onTap: () async {
-                            await SoundManager().playPreset(preset.id, volume: settingsService.settings.alarmVolume);
-                            await settingsService.setSoundName(preset.id);
-                            if (ctx.mounted) {
-                              setModalState(() {});
-                            }
-                          },
                         ),
                       );
                     },
