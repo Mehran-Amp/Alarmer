@@ -137,10 +137,10 @@ class SoundManager {
         ),
         iOS: AudioContextIOS(
           category: AVAudioSessionCategory.playback,
-          options: const [
+          options: const {
             AVAudioSessionOptions.duckOthers,
             AVAudioSessionOptions.defaultToSpeaker,
-          ],
+          },
         ),
       ));
 
