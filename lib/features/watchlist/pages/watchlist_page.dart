@@ -217,7 +217,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
                   AppTokens.space16,
                   AppTokens.space12,
                   AppTokens.space16,
-                  AppTokens.space80,
+                  80.0,
                 ),
                 itemCount: rules.length,
                 separatorBuilder: (_, __) => const SizedBox(height: AppTokens.space12),

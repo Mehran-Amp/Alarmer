@@ -6,6 +6,7 @@ import '../../../../core/utils/crypto_icons.dart';
 import '../../alert_engine/models/alert_rule.dart';
 import '../../alert_engine/models/trigger_mode.dart';
 import '../../alert_engine/repositories/json_alert_rule_repository.dart';
+import '../../exchanges/base/crypto_catalog_data.dart';
 import '../../exchanges/base/currency_pair.dart';
 import '../../exchanges/base/exchange.dart';
 import '../../exchanges/base/exchange_category.dart';
@@ -310,7 +311,9 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
 
     if (widget.initialRule != null) {
       final updatedRule = widget.initialRule!.copyWith(
-        pair: pair,
+        baseCurrency: pair.baseCurrency,
+        counterCurrency: pair.counterCurrency,
+        marketSymbol: pair.marketSymbol,
         exchangeId: exchangeId,
         checkIntervalSeconds: intervalSeconds,
         conditionType: _conditionType,

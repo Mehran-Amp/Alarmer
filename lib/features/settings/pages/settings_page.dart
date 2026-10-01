@@ -161,7 +161,12 @@ class _SettingsPageState extends State<SettingsPage> {
     final settingsService = context.read<SettingsService>();
     final theme = Theme.of(context);
 
+    // Ensure permissions are granted
+    await notifService.requestPermissions();
+
     if (settingsService.settings.vibrationEnabled) {
+      await HapticFeedback.heavyImpact();
+      await Future.delayed(const Duration(milliseconds: 150));
       await HapticFeedback.heavyImpact();
     }
 
