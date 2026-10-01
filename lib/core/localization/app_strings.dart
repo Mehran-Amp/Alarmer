@@ -131,6 +131,8 @@ class AppStrings {
       'interval_suffix': ' یک‌بار در پس‌زمینه انجام خواهد شد.',
       'offline_error': 'عدم دسترسی به اینترنت. آخرین قیمت واقعی نگه‌داری می‌شود.',
       'offline_badge': 'آفلاین (قیمت قبلی)',
+      'edit_alert_title': 'ویرایش تنظیمات هشدار',
+      'save_changes_cta': 'ذخیره تغییرات هشدار',
     },
 
     // 2. ENGLISH (English - LTR)
@@ -255,6 +257,8 @@ class AppStrings {
       'interval_suffix': ' in background.',
       'offline_error': 'No internet connection. Keeping last recorded authentic price.',
       'offline_badge': 'Offline (Last Price)',
+      'edit_alert_title': 'Edit Price Alert',
+      'save_changes_cta': 'Save Alert Changes',
     },
 
     // 3. KURDISH SORANI (کوردی سۆرانی - RTL)

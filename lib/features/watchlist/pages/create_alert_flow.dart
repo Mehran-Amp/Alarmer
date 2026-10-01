@@ -24,23 +24,27 @@ enum MarketFlowType {
 class CreateAlertFlow extends StatefulWidget {
   final ExchangeRegistry registry;
   final JsonAlertRuleRepository repository;
+  final AlertRule? initialRule;
 
   const CreateAlertFlow({
     super.key,
     required this.registry,
     required this.repository,
+    this.initialRule,
   });
 
   static Future<bool?> open(
     BuildContext context, {
     required ExchangeRegistry registry,
     required JsonAlertRuleRepository repository,
+    AlertRule? initialRule,
   }) {
     return Navigator.of(context).push<bool>(
       MaterialPageRoute(
         builder: (_) => CreateAlertFlow(
           registry: registry,
           repository: repository,
+          initialRule: initialRule,
         ),
       ),
     );
@@ -74,13 +78,70 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
 
   // Frequency
   CheckUnit _checkUnit = CheckUnit.minutes;
-  final TextEditingController _unitValueController = TextEditingController(text: '1');
+  late final TextEditingController _unitValueController;
 
   // Condition
   AlertConditionType _conditionType = AlertConditionType.percentChange;
   AlertDirection _direction = AlertDirection.bothSides;
-  final TextEditingController _percentController = TextEditingController(text: '2.5');
-  final TextEditingController _targetPriceController = TextEditingController();
+  late final TextEditingController _percentController;
+  late final TextEditingController _targetPriceController;
+
+  @override
+  void initState() {
+    super.initState();
+
+    if (widget.initialRule != null) {
+      final rule = widget.initialRule!;
+      _conditionType = rule.conditionType;
+      _direction = rule.direction;
+      _currentPrice = rule.currentDisplayPrice;
+
+      // Determine Interval Unit and Value
+      final secs = rule.checkIntervalSeconds;
+      if (secs % 3600 == 0 && secs >= 3600) {
+        _checkUnit = CheckUnit.hours;
+        _unitValueController = TextEditingController(text: (secs ~/ 3600).toString());
+      } else if (secs % 60 == 0 && secs >= 60) {
+        _checkUnit = CheckUnit.minutes;
+        _unitValueController = TextEditingController(text: (secs ~/ 60).toString());
+      } else {
+        _checkUnit = CheckUnit.seconds;
+        _unitValueController = TextEditingController(text: secs.toString());
+      }
+
+      _percentController = TextEditingController(
+        text: (rule.percent ?? 2.5).toString(),
+      );
+      _targetPriceController = TextEditingController(
+        text: rule.targetPrice != null ? rule.targetPrice.toString() : (_currentPrice?.toStringAsFixed(2) ?? ''),
+      );
+
+      // Determine Market Type
+      if (rule.exchangeId == 'global_stocks') {
+        _flowType = MarketFlowType.macro;
+        _step = 2;
+        _selectedMacroAsset = GlobalStocksExchange.predefinedStocks.firstWhere(
+          (s) => s['symbol'] == rule.baseCurrency,
+          orElse: () => {
+            'symbol': rule.baseCurrency,
+            'name': rule.pair.displayName,
+            'nameFa': rule.pair.displayName,
+            'cat': 'Custom',
+            'price': rule.currentDisplayPrice ?? 0.0,
+          },
+        );
+      } else {
+        _flowType = MarketFlowType.crypto;
+        _step = 3;
+        _selectedExchange = widget.registry.get(rule.exchangeId);
+        _selectedPair = rule.pair;
+      }
+    } else {
+      _unitValueController = TextEditingController(text: '1');
+      _percentController = TextEditingController(text: '2.5');
+      _targetPriceController = TextEditingController();
+    }
+  }
 
   @override
   void dispose() {
@@ -237,18 +298,32 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
       }
     }
 
-    final newRule = AlertRule.create(
-      pair: pair,
-      exchangeId: exchangeId,
-      checkIntervalSeconds: intervalSeconds,
-      conditionType: _conditionType,
-      direction: _direction,
-      percent: percent,
-      targetPrice: targetPrice,
-      currentPrice: _currentPrice,
-    );
-
-    await widget.repository.saveRule(newRule);
+    if (widget.initialRule != null) {
+      final updatedRule = widget.initialRule!.copyWith(
+        pair: pair,
+        exchangeId: exchangeId,
+        checkIntervalSeconds: intervalSeconds,
+        conditionType: _conditionType,
+        direction: _direction,
+        percent: percent,
+        targetPrice: targetPrice,
+        basePrice: _currentPrice ?? widget.initialRule!.basePrice,
+        lastCheckedPrice: _currentPrice ?? widget.initialRule!.lastCheckedPrice,
+      );
+      await widget.repository.saveRule(updatedRule);
+    } else {
+      final newRule = AlertRule.create(
+        pair: pair,
+        exchangeId: exchangeId,
+        checkIntervalSeconds: intervalSeconds,
+        conditionType: _conditionType,
+        direction: _direction,
+        percent: percent,
+        targetPrice: targetPrice,
+        currentPrice: _currentPrice,
+      );
+      await widget.repository.saveRule(newRule);
+    }
 
     if (mounted) {
       Navigator.of(context).pop(true);
@@ -261,6 +336,8 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
     final settingsService = context.watch<SettingsService>();
     final lang = settingsService.settings.language;
 
+    final isEditMode = widget.initialRule != null;
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
@@ -269,7 +346,9 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
         leading: IconButton(
           icon: Icon(Icons.arrow_back_rounded, color: theme.colorScheme.onSurface),
           onPressed: () {
-            if (_step > 1) {
+            if (isEditMode) {
+              Navigator.of(context).pop();
+            } else if (_step > 1) {
               setState(() => _step--);
             } else if (_flowType != MarketFlowType.none) {
               setState(() {
@@ -282,9 +361,11 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
           },
         ),
         title: Text(
-          _flowType == MarketFlowType.none
-              ? AppStrings.get('choose_market_step', lang)
-              : (_flowType == MarketFlowType.crypto ? AppStrings.get('crypto_market_title', lang) : AppStrings.get('macro_market_title', lang)),
+          isEditMode
+              ? AppStrings.get('edit_alert_title', lang)
+              : (_flowType == MarketFlowType.none
+                  ? AppStrings.get('choose_market_step', lang)
+                  : (_flowType == MarketFlowType.crypto ? AppStrings.get('crypto_market_title', lang) : AppStrings.get('macro_market_title', lang))),
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
         ),
       ),
@@ -1129,7 +1210,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             child: Text(
-              AppStrings.get('save_alert_cta', lang),
+              AppStrings.get(widget.initialRule != null ? 'save_changes_cta' : 'save_alert_cta', lang),
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             ),
           ),

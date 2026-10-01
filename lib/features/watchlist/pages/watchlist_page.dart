@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/constants/strings.dart';
@@ -14,6 +15,7 @@ import 'create_alert_flow.dart';
 
 /// The Main Screen of Alarmer: Personal Price Alerts.
 /// Highlights the latest checked price prominently (large and bold).
+/// Supports full tap-to-edit and a 100% reliable in-app floating undo toast.
 class WatchlistPage extends StatefulWidget {
   const WatchlistPage({super.key});
 
@@ -23,6 +25,14 @@ class WatchlistPage extends StatefulWidget {
 
 class _WatchlistPageState extends State<WatchlistPage> {
   final Set<String> _checkingRuleUuids = {};
+  AlertRule? _recentlyDeletedRule;
+  Timer? _undoToastTimer;
+
+  @override
+  void dispose() {
+    _undoToastTimer?.cancel();
+    super.dispose();
+  }
 
   void _openCreateFlow() {
     final registry = context.read<ExchangeRegistry>();
@@ -33,6 +43,51 @@ class _WatchlistPageState extends State<WatchlistPage> {
       registry: registry,
       repository: repository,
     );
+  }
+
+  void _openEditFlow(AlertRule rule) {
+    final registry = context.read<ExchangeRegistry>();
+    final repository = context.read<JsonAlertRuleRepository>();
+
+    CreateAlertFlow.open(
+      context,
+      registry: registry,
+      repository: repository,
+      initialRule: rule,
+    );
+  }
+
+  void _onRuleDismissed(AlertRule rule, JsonAlertRuleRepository repository) {
+    _undoToastTimer?.cancel();
+    repository.deleteRule(rule.uuid);
+    setState(() {
+      _recentlyDeletedRule = rule;
+    });
+
+    _undoToastTimer = Timer(const Duration(milliseconds: 3800), () {
+      if (mounted) {
+        setState(() {
+          _recentlyDeletedRule = null;
+        });
+      }
+    });
+  }
+
+  void _undoDelete(JsonAlertRuleRepository repository) {
+    if (_recentlyDeletedRule != null) {
+      _undoToastTimer?.cancel();
+      repository.saveRule(_recentlyDeletedRule!);
+      setState(() {
+        _recentlyDeletedRule = null;
+      });
+    }
+  }
+
+  void _dismissUndoToast() {
+    _undoToastTimer?.cancel();
+    setState(() {
+      _recentlyDeletedRule = null;
+    });
   }
 
   Future<void> _manualCheck(AlertRule rule, SchedulerService scheduler, String lang) async {
@@ -146,28 +201,106 @@ class _WatchlistPageState extends State<WatchlistPage> {
           ),
         ],
       ),
-      body: StreamBuilder<List<AlertRule>>(
-        stream: repository.watchAllRules(),
-        builder: (context, snapshot) {
-          final rules = snapshot.data ?? repository.allRules;
+      body: Stack(
+        children: [
+          StreamBuilder<List<AlertRule>>(
+            stream: repository.watchAllRules(),
+            builder: (context, snapshot) {
+              final rules = snapshot.data ?? repository.allRules;
 
-          if (rules.isEmpty) {
-            return _buildEmptyState(lang, theme);
-          }
+              if (rules.isEmpty) {
+                return _buildEmptyState(lang, theme);
+              }
 
-          return ListView.separated(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppTokens.space16,
-              vertical: AppTokens.space12,
-            ),
-            itemCount: rules.length,
-            separatorBuilder: (_, __) => const SizedBox(height: AppTokens.space12),
-            itemBuilder: (context, index) {
-              final rule = rules[index];
-              return _buildAlertCard(rule, repository, scheduler, lang);
+              return ListView.separated(
+                padding: const EdgeInsets.fromLTRB(
+                  AppTokens.space16,
+                  AppTokens.space12,
+                  AppTokens.space16,
+                  AppTokens.space80,
+                ),
+                itemCount: rules.length,
+                separatorBuilder: (_, __) => const SizedBox(height: AppTokens.space12),
+                itemBuilder: (context, index) {
+                  final rule = rules[index];
+                  return _buildAlertCard(rule, repository, scheduler, lang);
+                },
+              );
             },
-          );
-        },
+          ),
+
+          // 100% Reliable In-App Floating Undo Toast
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 280),
+            curve: Curves.easeOutCubic,
+            left: 16,
+            right: 16,
+            bottom: _recentlyDeletedRule != null ? 20 : -100,
+            child: _buildUndoToast(lang, theme, repository),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUndoToast(String lang, ThemeData theme, JsonAlertRuleRepository repository) {
+    if (_recentlyDeletedRule == null) return const SizedBox.shrink();
+
+    final ruleName = _recentlyDeletedRule!.pair.displayName;
+
+    return Material(
+      elevation: 10,
+      borderRadius: BorderRadius.circular(14),
+      color: theme.colorScheme.surfaceContainerHighest,
+      shadowColor: Colors.black.withValues(alpha: 0.35),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: theme.dividerColor),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.delete_outline_rounded, color: AppTokens.negative, size: 22),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                '${AppStrings.get('alert_deleted_msg', lang)}$ruleName',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurface,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            TextButton.icon(
+              onPressed: () => _undoDelete(repository),
+              icon: Icon(Icons.undo_rounded, size: 16, color: theme.colorScheme.primary),
+              label: Text(
+                AppStrings.get('undo_action', lang),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              icon: Icon(Icons.close_rounded, size: 18, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+              onPressed: _dismissUndoToast,
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -204,239 +337,235 @@ class _WatchlistPageState extends State<WatchlistPage> {
         ),
         child: const Icon(Icons.delete_sweep_rounded, color: Colors.white, size: 24),
       ),
-      onDismissed: (_) {
-        repository.deleteRule(rule.uuid);
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(seconds: 4),
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            content: Text('${AppStrings.get('alert_deleted_msg', lang)}${rule.pair.displayName}'),
-            backgroundColor: theme.colorScheme.surfaceContainerHighest,
-            action: SnackBarAction(
-              label: AppStrings.get('undo_action', lang),
-              textColor: theme.colorScheme.primary,
-              onPressed: () {
-                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                repository.saveRule(rule);
-              },
-            ),
-          ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surface,
+      onDismissed: (_) => _onRuleDismissed(rule, repository),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: () => _openEditFlow(rule),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isTriggeredOneShot
-                ? AppTokens.warning.withValues(alpha: 0.7)
-                : theme.dividerColor,
-            width: isTriggeredOneShot ? 1.5 : 1.0,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 6,
-              offset: const Offset(0, 2),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isTriggeredOneShot
+                    ? AppTokens.warning.withValues(alpha: 0.7)
+                    : theme.dividerColor,
+                width: isTriggeredOneShot ? 1.5 : 1.0,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Column(
-          children: [
-            // Row 1: Logo + Coin info & Exchange Name + Live Price + Switch
-            Row(
+            child: Column(
               children: [
-                CryptoIcons.buildLogo(rule.baseCurrency, size: 36),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        rule.pair.displayName,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: rule.isActive ? theme.colorScheme.onSurface : textMuted,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Row(
+                // Row 1: Logo + Coin info & Exchange Name + Live Price + Switch
+                Row(
+                  children: [
+                    CryptoIcons.buildLogo(rule.baseCurrency, size: 36),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.storefront_rounded, size: 12, color: theme.colorScheme.primary),
-                          const SizedBox(width: 4),
-                          Flexible(
-                            child: Text(
-                              _getExchangeDisplayName(rule.exchangeId, lang),
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w500,
-                                color: rule.isActive ? textSecondary : textMuted,
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  rule.pair.displayName,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    color: rule.isActive ? theme.colorScheme.onSurface : textMuted,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                              const SizedBox(width: 4),
+                              Icon(Icons.edit_note_rounded, size: 14, color: theme.colorScheme.primary.withValues(alpha: 0.5)),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              Icon(Icons.storefront_rounded, size: 12, color: theme.colorScheme.primary),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  _getExchangeDisplayName(rule.exchangeId, lang),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                    color: rule.isActive ? textSecondary : textMuted,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      displayPrice != null ? _formatPrice(displayPrice) : '---',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                        fontFamily: 'monospace',
-                        color: rule.isActive
-                            ? (changePercent != null && changePercent >= 0 ? theme.colorScheme.primary : theme.colorScheme.onSurface)
-                            : textMuted,
-                      ),
                     ),
-                    if (changePercent != null)
-                      Text(
-                        '${changePercent >= 0 ? '+' : ''}${changePercent.toStringAsFixed(2)}%',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'monospace',
-                          color: changePercent >= 0 ? AppTokens.positive : AppTokens.negative,
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(width: 4),
-                Transform.scale(
-                  scale: 0.8,
-                  child: isTriggeredOneShot
-                      ? IconButton(
-                          icon: const Icon(Icons.replay_rounded, color: AppTokens.warning),
-                          onPressed: () => repository.rearmRule(rule.uuid),
-                        )
-                      : Switch(
-                          value: rule.isActive,
-                          activeThumbColor: Colors.white,
-                          activeTrackColor: theme.colorScheme.primary,
-                          onChanged: (val) => repository.saveRule(rule.copyWith(isActive: val)),
-                        ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 8),
-
-            // Row 2: Condition Summary Tag
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.2)),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    rule.conditionType == AlertConditionType.priceThreshold
-                        ? Icons.flag_rounded
-                        : Icons.show_chart_rounded,
-                    size: 14,
-                    color: theme.colorScheme.primary,
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      _buildConditionSummary(rule, lang),
-                      style: TextStyle(
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                        color: rule.isActive ? theme.colorScheme.onSurface : textMuted,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 8),
-
-            // Row 3: Interval Tag + Baseline + Last Checked + Quick Check Now Button
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: theme.dividerColor),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.timer_outlined, size: 11, color: theme.colorScheme.primary),
-                      const SizedBox(width: 3),
-                      Text(
-                        _formatInterval(rule.checkIntervalSeconds, lang),
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: theme.colorScheme.primary),
-                      ),
-                    ],
-                  ),
-                ),
-                if (rule.basePrice != null && rule.basePrice! > 0) ...[
-                  const SizedBox(width: 8),
-                  Text(
-                    '${AppStrings.get('baseline', lang)}: ${_formatPrice(rule.basePrice!)}',
-                    style: TextStyle(fontSize: 10, color: textMuted),
-                  ),
-                ],
-                const Spacer(),
-                if (rule.lastCheckedAt != null)
-                  Text(
-                    _formatTimeAgo(rule.lastCheckedAt!, lang),
-                    style: TextStyle(fontSize: 10, color: textMuted),
-                  ),
-                const SizedBox(width: 8),
-                InkWell(
-                  onTap: isChecking ? null : () => _manualCheck(rule, scheduler, lang),
-                  borderRadius: BorderRadius.circular(6),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: theme.dividerColor),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                    const SizedBox(width: 8),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        if (isChecking)
-                          SizedBox(
-                            width: 10,
-                            height: 10,
-                            child: CircularProgressIndicator(strokeWidth: 1.5, color: theme.colorScheme.primary),
-                          )
-                        else
-                          Icon(Icons.refresh_rounded, size: 12, color: theme.colorScheme.primary),
-                        const SizedBox(width: 4),
                         Text(
-                          AppStrings.get('check_now', lang),
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+                          displayPrice != null ? _formatPrice(displayPrice) : '---',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            fontFamily: 'monospace',
+                            color: rule.isActive
+                                ? (changePercent != null && changePercent >= 0 ? theme.colorScheme.primary : theme.colorScheme.onSurface)
+                                : textMuted,
+                          ),
                         ),
+                        if (changePercent != null)
+                          Text(
+                            '${changePercent >= 0 ? '+' : ''}${changePercent.toStringAsFixed(2)}%',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'monospace',
+                              color: changePercent >= 0 ? AppTokens.positive : AppTokens.negative,
+                            ),
+                          ),
                       ],
                     ),
+                    const SizedBox(width: 4),
+                    Transform.scale(
+                      scale: 0.8,
+                      child: isTriggeredOneShot
+                          ? IconButton(
+                              icon: const Icon(Icons.replay_rounded, color: AppTokens.warning),
+                              onPressed: () => repository.rearmRule(rule.uuid),
+                            )
+                          : Switch(
+                              value: rule.isActive,
+                              activeThumbColor: Colors.white,
+                              activeTrackColor: theme.colorScheme.primary,
+                              onChanged: (val) => repository.saveRule(rule.copyWith(isActive: val)),
+                            ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 8),
+
+                // Row 2: Condition Summary Tag
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.2)),
                   ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        rule.conditionType == AlertConditionType.priceThreshold
+                            ? Icons.flag_rounded
+                            : Icons.show_chart_rounded,
+                        size: 14,
+                        color: theme.colorScheme.primary,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          _buildConditionSummary(rule, lang),
+                          style: TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            color: rule.isActive ? theme.colorScheme.onSurface : textMuted,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                // Row 3: Interval Tag + Baseline + Last Checked + Quick Check Now Button
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: theme.dividerColor),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.timer_outlined, size: 11, color: theme.colorScheme.primary),
+                          const SizedBox(width: 3),
+                          Text(
+                            _formatInterval(rule.checkIntervalSeconds, lang),
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: theme.colorScheme.primary),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (rule.basePrice != null && rule.basePrice! > 0) ...[
+                      const SizedBox(width: 8),
+                      Text(
+                        '${AppStrings.get('baseline', lang)}: ${_formatPrice(rule.basePrice!)}',
+                        style: TextStyle(fontSize: 10, color: textMuted),
+                      ),
+                    ],
+                    const Spacer(),
+                    if (rule.lastCheckedAt != null)
+                      Text(
+                        _formatTimeAgo(rule.lastCheckedAt!, lang),
+                        style: TextStyle(fontSize: 10, color: textMuted),
+                      ),
+                    const SizedBox(width: 8),
+                    InkWell(
+                      onTap: isChecking ? null : () => _manualCheck(rule, scheduler, lang),
+                      borderRadius: BorderRadius.circular(6),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: theme.dividerColor),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (isChecking)
+                              SizedBox(
+                                width: 10,
+                                height: 10,
+                                child: CircularProgressIndicator(strokeWidth: 1.5, color: theme.colorScheme.primary),
+                              )
+                            else
+                              Icon(Icons.refresh_rounded, size: 12, color: theme.colorScheme.primary),
+                            const SizedBox(width: 4),
+                            Text(
+                              AppStrings.get('check_now', lang),
+                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );
@@ -452,9 +581,8 @@ class _WatchlistPageState extends State<WatchlistPage> {
             Container(
               padding: const EdgeInsets.all(AppTokens.space24),
               decoration: BoxDecoration(
-                color: theme.cardColor,
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
-                border: Border.all(color: theme.dividerColor),
               ),
               child: Icon(
                 Icons.add_alert_rounded,
@@ -466,17 +594,18 @@ class _WatchlistPageState extends State<WatchlistPage> {
             Text(
               AppStrings.get('empty_alerts_title', lang),
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 17,
                 fontWeight: FontWeight.bold,
                 color: theme.colorScheme.onSurface,
               ),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppTokens.space8),
             Text(
               AppStrings.get('empty_alerts_desc', lang),
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 12.5,
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 height: 1.5,
               ),
@@ -484,8 +613,17 @@ class _WatchlistPageState extends State<WatchlistPage> {
             const SizedBox(height: AppTokens.space24),
             ElevatedButton.icon(
               onPressed: _openCreateFlow,
-              icon: const Icon(Icons.add_rounded),
-              label: Text(AppStrings.get('create_first_alert', lang)),
+              icon: const Icon(Icons.add_rounded, size: 20),
+              label: Text(
+                AppStrings.get('create_first_alert', lang),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.colorScheme.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
             ),
           ],
         ),
@@ -493,41 +631,57 @@ class _WatchlistPageState extends State<WatchlistPage> {
     );
   }
 
-  String _buildConditionSummary(AlertRule rule, [String lang = 'fa']) {
-    switch (rule.conditionType) {
-      case AlertConditionType.percentChange:
-        if (rule.direction == AlertDirection.bothSides) {
-          return '${AppStrings.get('price_fluctuation', lang)} ±${rule.percent?.toStringAsFixed(1) ?? '0'}%';
-        } else if (rule.direction == AlertDirection.above) {
-          return '${AppStrings.get('price_surge', lang)} +${rule.percent?.toStringAsFixed(1) ?? '0'}%';
-        } else {
-          return '${AppStrings.get('price_drop', lang)} -${rule.percent?.toStringAsFixed(1) ?? '0'}%';
-        }
-      case AlertConditionType.priceThreshold:
-        final targetStr = rule.targetPrice != null ? _formatPrice(rule.targetPrice!) : '---';
-        final dir = rule.direction == AlertDirection.above
-            ? AppStrings.get('price_cross_above', lang)
-            : AppStrings.get('price_cross_below', lang);
-        return '${AppStrings.get('target_price_summary', lang)} $dir $targetStr';
-      case AlertConditionType.absolutePriceChange:
-        final dir = rule.direction == AlertDirection.bothSides
-            ? '±'
-            : (rule.direction == AlertDirection.above ? '+' : '-');
-        return '${AppStrings.get('price_delta_summary', lang)} $dir\$${rule.deltaAbsolute?.toStringAsFixed(2) ?? '0'}';
-      case AlertConditionType.volumeChange:
-        final dir = rule.direction == AlertDirection.above ? '+' : '-';
-        return '${AppStrings.get('volume_surge_summary', lang)} $dir${rule.volumePercent?.toStringAsFixed(1) ?? '0'}%';
+  String _formatPrice(double price) {
+    if (price >= 1000) {
+      final parts = price.toStringAsFixed(2).split('.');
+      final whole = parts[0].replaceAllMapped(
+        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+        (Match m) => '${m[1]},',
+      );
+      return '\$$whole.${parts[1]}';
+    } else if (price >= 1) {
+      return '\$${price.toStringAsFixed(2)}';
+    } else if (price >= 0.0001) {
+      return '\$${price.toStringAsFixed(4)}';
+    } else {
+      return '\$${price.toStringAsFixed(8)}';
     }
   }
 
-  String _getExchangeDisplayName(String exchangeId, [String lang = 'fa']) {
-    switch (exchangeId.toLowerCase()) {
+  String _formatInterval(int seconds, String lang) {
+    if (seconds < 60) {
+      return '$seconds ${AppStrings.get('seconds', lang)}';
+    } else if (seconds < 3600) {
+      final m = seconds ~/ 60;
+      return '$m ${AppStrings.get('minutes', lang)}';
+    } else {
+      final h = seconds ~/ 3600;
+      return '$h ${AppStrings.get('hours', lang)}';
+    }
+  }
+
+  String _formatTimeAgo(DateTime dt, String lang) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inSeconds < 10) return AppStrings.get('just_now', lang);
+    if (diff.inSeconds < 60) return '${diff.inSeconds}${AppStrings.get('seconds_ago', lang)}';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}${AppStrings.get('minutes_ago', lang)}';
+    if (diff.inHours < 24) return '${diff.inHours}${AppStrings.get('hours_ago', lang)}';
+    return '${diff.inDays}${AppStrings.get('days_ago', lang)}';
+  }
+
+  String _getExchangeDisplayName(String exchangeId, String lang) {
+    final isFa = AppStrings.isRtl(lang);
+    switch (exchangeId) {
+      case 'global_stocks':
+        return isFa ? 'بازار جهانی و وال‌استریت' : 'Global Equities & Commodities';
       case 'binance':
         return 'Binance';
       case 'nobitex':
-        return 'Nobitex';
+        return isFa ? 'نوبیتکس' : 'Nobitex';
       case 'wallex':
-        return 'Wallex';
+        return isFa ? 'والکس' : 'Wallex';
+      case 'coinbase':
+        return 'Coinbase';
       case 'kucoin':
         return 'KuCoin';
       case 'okx':
@@ -536,40 +690,32 @@ class _WatchlistPageState extends State<WatchlistPage> {
         return 'Bybit';
       case 'coingecko':
         return 'CoinGecko';
-      case 'coinmarketcap':
-        return 'CoinMarketCap';
-      case 'global_stocks':
-        return AppStrings.get('wallstreet_stocks', lang);
       default:
         return exchangeId.toUpperCase();
     }
   }
 
-  String _formatPrice(double price) {
-    if (price < 0.0001) return '\$${price.toStringAsFixed(7)}';
-    if (price < 1.0) return '\$${price.toStringAsFixed(4)}';
-    if (price >= 1000) {
-      final intPart = price.round().toString().replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-        (Match m) => '${m[1]},',
-      );
-      return '\$$intPart';
+  String _buildConditionSummary(AlertRule rule, String lang) {
+    final isFa = AppStrings.isRtl(lang);
+    switch (rule.conditionType) {
+      case AlertConditionType.priceThreshold:
+        final dirStr = rule.direction == AlertDirection.above
+            ? (isFa ? 'صعود به بالای' : 'Crosses above')
+            : (rule.direction == AlertDirection.below ? (isFa ? 'سقوط به زیر' : 'Drops below') : (isFa ? 'رسیدن به' : 'Reaches'));
+        return '$dirStr ${_formatPrice(rule.targetPrice ?? 0)}';
+
+      case AlertConditionType.percentChange:
+        final p = rule.percent ?? 0;
+        final dirStr = rule.direction == AlertDirection.above
+            ? (isFa ? 'رشد حداقل' : 'Surges by +')
+            : (rule.direction == AlertDirection.below ? (isFa ? 'افت حداقل' : 'Drops by -') : (isFa ? 'نوسان' : 'Moves ±'));
+        return '$dirStr ${p.toStringAsFixed(1)}%';
+
+      case AlertConditionType.absolutePriceChange:
+        return '${isFa ? "تغییر" : "Changes by"} ${_formatPrice(rule.deltaAbsolute ?? 0)}';
+
+      case AlertConditionType.volumeChange:
+        return '${isFa ? "جهش حجم" : "Volume jump"} ${(rule.volumePercent ?? 0).toStringAsFixed(1)}%';
     }
-    return '\$${price.toStringAsFixed(2)}';
-  }
-
-  String _formatInterval(int seconds, [String lang = 'fa']) {
-    if (seconds >= 3600) return '${seconds ~/ 3600} ${AppStrings.get('hours', lang)}';
-    if (seconds >= 60) return '${seconds ~/ 60} ${AppStrings.get('minutes', lang)}';
-    return '$seconds ${AppStrings.get('seconds', lang)}';
-  }
-
-  String _formatTimeAgo(DateTime dt, [String lang = 'fa']) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inSeconds < 10) return AppStrings.get('just_now', lang);
-    if (diff.inSeconds < 60) return '${diff.inSeconds} ${AppStrings.get('seconds_ago', lang)}';
-    if (diff.inMinutes < 60) return '${diff.inMinutes} ${AppStrings.get('minutes_ago', lang)}';
-    if (diff.inHours < 24) return '${diff.inHours} ${AppStrings.get('hours_ago', lang)}';
-    return '${diff.inDays} ${AppStrings.get('days_ago', lang)}';
   }
 }
