@@ -10,6 +10,7 @@ import '../../notifications/repositories/notification_repository.dart';
 import '../../notifications/services/notification_service.dart';
 import '../models/app_settings.dart';
 import '../services/settings_service.dart';
+import '../services/sound_manager.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -156,6 +157,138 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  void _showSoundPicker(BuildContext context, SettingsService settingsService, String currentSoundId, String lang) {
+    final theme = Theme.of(context);
+    final isFa = lang == 'fa' || lang == 'ar' || lang == 'ckb';
+    final isRtl = AppStrings.isRtl(lang);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: theme.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Directionality(
+          textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.music_note_rounded, size: 22),
+                        const SizedBox(width: 8),
+                        Text(
+                          isFa ? 'انتخاب آهنگ زنگ و صدای آلارم' : 'Select Alarm Ringtone',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close_rounded, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                      onPressed: () {
+                        SoundManager().stop();
+                        Navigator.pop(ctx);
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: ListView.separated(
+                    itemCount: SoundManager.presets.length,
+                    separatorBuilder: (_, __) => Divider(height: 1, color: theme.dividerColor),
+                    itemBuilder: (context, index) {
+                      final preset = SoundManager.presets[index];
+                      final isSelected = currentSoundId == preset.id;
+                      final isPlaying = SoundManager().isSoundPlaying(preset.id);
+                      final title = isFa ? preset.titleFa : preset.titleEn;
+
+                      return Material(
+                        color: Colors.transparent,
+                        child: ListTile(
+                          leading: Text(preset.icon, style: const TextStyle(fontSize: 22)),
+                          title: Text(
+                            title,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface,
+                            ),
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: Icon(
+                                  isPlaying ? Icons.stop_circle_rounded : Icons.play_circle_filled_rounded,
+                                  color: isPlaying ? AppTokens.negative : theme.colorScheme.primary,
+                                  size: 28,
+                                ),
+                                onPressed: () async {
+                                  if (isPlaying) {
+                                    await SoundManager().stop();
+                                  } else {
+                                    await SoundManager().playPreset(preset.id, volume: settingsService.settings.alarmVolume);
+                                  }
+                                  setModalState(() {});
+                                },
+                              ),
+                              if (isSelected)
+                                Icon(Icons.check_circle_rounded, color: theme.colorScheme.primary, size: 22),
+                            ],
+                          ),
+                          selected: isSelected,
+                          selectedTileColor: theme.colorScheme.primary.withValues(alpha: 0.08),
+                          onTap: () async {
+                            await SoundManager().playPreset(preset.id, volume: settingsService.settings.alarmVolume);
+                            await settingsService.setSoundName(preset.id);
+                            if (ctx.mounted) {
+                              setModalState(() {});
+                            }
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      SoundManager().stop();
+                      Navigator.pop(ctx);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.colorScheme.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: Text(isFa ? 'تأیید و ذخیره' : 'Save & Confirm', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ).whenComplete(() {
+      SoundManager().stop();
+    });
+  }
+
   Future<void> _testAlarm(BuildContext context, String lang) async {
     final notifService = context.read<NotificationService>();
     final settingsService = context.read<SettingsService>();
@@ -164,20 +297,14 @@ class _SettingsPageState extends State<SettingsPage> {
     // Ensure permissions are granted
     await notifService.requestPermissions();
 
-    if (settingsService.settings.vibrationEnabled) {
-      await HapticFeedback.heavyImpact();
-      await Future.delayed(const Duration(milliseconds: 150));
-      await HapticFeedback.heavyImpact();
-    }
-
-    if (settingsService.settings.soundEnabled) {
-      await SystemSound.play(SystemSoundType.alert);
-    }
-
     await notifService.showCriticalAlert(
       id: 99999,
       title: AppStrings.get('test_alert_title', lang),
       body: AppStrings.get('test_alert_body', lang),
+      soundName: settingsService.settings.soundName,
+      volume: settingsService.settings.alarmVolume,
+      soundEnabled: settingsService.settings.soundEnabled,
+      vibrationEnabled: settingsService.settings.vibrationEnabled,
     );
 
     if (context.mounted) {
@@ -492,25 +619,137 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: AppTokens.space20),
 
-          // Section 3: Sound & Vibration Toggles
-          _buildSectionHeader(AppStrings.get('sound_and_vibrate', lang), theme),
+          // Section 3: Sound, Ringtone & Vibration
+          _buildSectionHeader(isFa ? 'تنظیمات صدای آلارم و زنگ هشدار' : 'Alarm Sound & Ringtone', theme),
           const SizedBox(height: AppTokens.space8),
 
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: AppTokens.space16, vertical: AppTokens.space8),
+            padding: const EdgeInsets.symmetric(horizontal: AppTokens.space16, vertical: AppTokens.space12),
             decoration: BoxDecoration(
               color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: theme.dividerColor),
             ),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // 1. Current Selected Sound Tile
+                Builder(builder: (context) {
+                  final currentPreset = SoundManager.presets.firstWhere(
+                    (p) => p.id == settings.soundName,
+                    orElse: () => SoundManager.presets.first,
+                  );
+                  final soundTitle = isFa ? currentPreset.titleFa : currentPreset.titleEn;
+                  final isPlaying = SoundManager().isSoundPlaying(currentPreset.id);
+
+                  return InkWell(
+                    onTap: () => _showSoundPicker(context, settingsService, settings.soundName, lang),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withValues(alpha: 0.07),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.25)),
+                      ),
+                      child: Row(
+                        children: [
+                          Text(currentPreset.icon, style: const TextStyle(fontSize: 24)),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  isFa ? 'صدای زنگ آلارم انتخابی' : 'Selected Alarm Sound',
+                                  style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  soundTitle,
+                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(
+                              isPlaying ? Icons.stop_circle_rounded : Icons.play_circle_filled_rounded,
+                              color: isPlaying ? AppTokens.negative : theme.colorScheme.primary,
+                              size: 30,
+                            ),
+                            onPressed: () async {
+                              if (isPlaying) {
+                                await SoundManager().stop();
+                              } else {
+                                await SoundManager().playPreset(currentPreset.id, volume: settings.alarmVolume);
+                              }
+                              setState(() {});
+                            },
+                          ),
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              isFa ? 'تغییر صدا' : 'Change',
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+                const SizedBox(height: 12),
+
+                // 2. Volume Slider
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.volume_up_rounded, size: 18, color: theme.colorScheme.primary),
+                        const SizedBox(width: 6),
+                        Text(
+                          isFa ? 'بلندی صدای آلارم' : 'Alarm Volume',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      '${(settings.alarmVolume * 100).toInt()}%',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, fontFamily: 'monospace', color: theme.colorScheme.primary),
+                    ),
+                  ],
+                ),
+                SliderTheme(
+                  data: SliderTheme.of(context).copyWith(
+                    activeTrackColor: theme.colorScheme.primary,
+                    thumbColor: theme.colorScheme.primary,
+                    inactiveTrackColor: theme.dividerColor,
+                    trackHeight: 4,
+                  ),
+                  child: Slider(
+                    value: settings.alarmVolume,
+                    min: 0.1,
+                    max: 1.0,
+                    divisions: 9,
+                    onChanged: (val) => settingsService.setAlarmVolume(val),
+                  ),
+                ),
+                Divider(height: 1, color: theme.dividerColor),
+
+                // 3. Sound & Vibration Switches
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  secondary: Icon(Icons.volume_up_rounded, color: theme.colorScheme.primary),
+                  secondary: Icon(Icons.music_note_rounded, color: theme.colorScheme.primary),
                   title: Text(
                     AppStrings.get('sound_alert', lang),
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                   ),
                   value: settings.soundEnabled,
                   activeColor: theme.colorScheme.primary,
@@ -522,30 +761,32 @@ class _SettingsPageState extends State<SettingsPage> {
                   secondary: Icon(Icons.vibration_rounded, color: theme.colorScheme.primary),
                   title: Text(
                     AppStrings.get('vibrate_alert', lang),
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                   ),
                   value: settings.vibrationEnabled,
                   activeColor: theme.colorScheme.primary,
                   onChanged: (val) => settingsService.toggleVibration(val),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
+
+                // 4. Test Alarm Button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: () => _testAlarm(context, lang),
                     icon: const Icon(Icons.notifications_active_rounded),
                     label: Text(
-                      AppStrings.get('test_sound_button', lang),
+                      isFa ? 'تست صدای آلارم و نوتیفیکیشن' : AppStrings.get('test_sound_button', lang),
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: theme.colorScheme.primary,
                       foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
                 ),
-                const SizedBox(height: 8),
               ],
             ),
           ),

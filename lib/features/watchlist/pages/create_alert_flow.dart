@@ -963,6 +963,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
           child: Row(
             children: [
               _buildMacroChip(isFa ? '🌐 همه نمادها' : 'All', 'all', theme),
+              _buildMacroChip(isFa ? '🇨🇳 بازارهای چین و آسیا' : 'China & Asia', 'China', theme),
               _buildMacroChip(isFa ? '🏆 ۱۰۰ شرکت برتر جهان' : 'Top 100 Global', 'Top100', theme),
               _buildMacroChip(isFa ? '🏛️ اوراق و شاخص دلار' : 'Macro & DXY', 'Macro', theme),
               _buildMacroChip(isFa ? '📊 شاخص‌های جهانی' : 'Indices', 'Indices', theme),

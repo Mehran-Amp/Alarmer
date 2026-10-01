@@ -60,4 +60,12 @@ class SettingsService extends ChangeNotifier {
   Future<void> toggleVibration(bool val) async {
     await update(_settings.copyWith(vibrationEnabled: val));
   }
+
+  Future<void> setSoundName(String soundId) async {
+    await update(_settings.copyWith(soundName: soundId));
+  }
+
+  Future<void> setAlarmVolume(double volume) async {
+    await update(_settings.copyWith(alarmVolume: volume));
+  }
 }
