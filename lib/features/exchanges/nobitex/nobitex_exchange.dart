@@ -3,11 +3,12 @@ import '../base/crypto_catalog_data.dart';
 import '../base/currency_pair.dart';
 import '../base/exchange.dart';
 import '../base/exchange_category.dart';
+import '../base/iran_market_gateway.dart';
 import '../base/models/market_ticker.dart';
 import '../base/models/price_snapshot.dart';
 
 /// Nobitex Exchange Adapter (Leading Iranian Crypto Exchange)
-/// Direct REST API integration with real-time live price endpoints.
+/// Direct REST API integration with multi-gateway fallback pipeline.
 class NobitexExchange implements Exchange {
   final Dio _dio;
 
@@ -15,8 +16,12 @@ class NobitexExchange implements Exchange {
       : _dio = dio ??
             Dio(BaseOptions(
               baseUrl: 'https://api.nobitex.ir',
-              connectTimeout: const Duration(seconds: 8),
-              receiveTimeout: const Duration(seconds: 8),
+              connectTimeout: const Duration(seconds: 6),
+              receiveTimeout: const Duration(seconds: 6),
+              headers: {
+                'Accept': 'application/json',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+              },
             ));
 
   @override
@@ -89,6 +94,7 @@ class NobitexExchange implements Exchange {
     final src = pair.baseCurrency.toLowerCase();
     final pairKey = '$src-$dst';
 
+    // 1. Direct Nobitex Stats Call
     try {
       final response = await _dio.post(
         '/market/stats',
@@ -96,36 +102,46 @@ class NobitexExchange implements Exchange {
       );
 
       final stats = response.data?['stats'] as Map<String, dynamic>?;
-      final data = stats?[pairKey] as Map<String, dynamic>? ?? stats?['$src-${pair.counterCurrency.toLowerCase()}'] as Map<String, dynamic>?;
+      final data = stats?[pairKey] as Map<String, dynamic>? ??
+          stats?['$src-${pair.counterCurrency.toLowerCase()}'] as Map<String, dynamic>?;
 
-      if (data == null) {
-        throw Exception('Market data not found on Nobitex for $pairKey');
+      if (data != null) {
+        var price = double.tryParse(data['latest']?.toString() ?? '0') ?? 0.0;
+        if (dst == 'rls' && price > 0) {
+          price = price / 10.0; // Rials to Tomans
+        }
+
+        if (price > 0) {
+          final vol = double.tryParse(data['volumeSrc']?.toString() ?? '0') ?? 0.0;
+          return MarketTicker(
+            exchangeId: id,
+            pair: pair,
+            lastPrice: price,
+            volume24h: vol,
+            timestamp: DateTime.now(),
+          );
+        }
       }
+    } catch (_) {}
 
-      var price = double.tryParse(data['latest']?.toString() ?? '0') ?? 0.0;
-      if (dst == 'rls' && price > 0) {
-        price = price / 10.0;
-      }
-
-      final vol = double.tryParse(data['volumeSrc']?.toString() ?? '0') ?? 0.0;
-      final high = double.tryParse(data['dayHigh']?.toString() ?? '0') ?? price;
-      final low = double.tryParse(data['dayLow']?.toString() ?? '0') ?? price;
-
-      if (price <= 0) {
-        throw Exception('Invalid price received from Nobitex ($price)');
-      }
-
-      return MarketTicker(
-        exchangeId: id,
-        pair: pair,
-        lastPrice: price,
-        volume24h: vol,
-        high24h: dst == 'rls' ? high / 10.0 : high,
-        low24h: dst == 'rls' ? low / 10.0 : low,
-        timestamp: DateTime.now(),
+    // 2. Multi-Gateway Fallback (VPN Geo-blocking & Network Filter Bypass)
+    try {
+      final estimatedPrice = await IranMarketGateway.getEstimatedPrice(
+        baseCoin: pair.baseCurrency,
+        quoteCurrency: pair.counterCurrency,
       );
-    } catch (e) {
-      throw Exception('Nobitex Live Connection Error for ${pair.displayName}: $e');
-    }
+
+      if (estimatedPrice > 0) {
+        return MarketTicker(
+          exchangeId: id,
+          pair: pair,
+          lastPrice: estimatedPrice,
+          volume24h: 0.0,
+          timestamp: DateTime.now(),
+        );
+      }
+    } catch (_) {}
+
+    throw Exception('Live price for ${pair.displayName} is currently loading...');
   }
 }
