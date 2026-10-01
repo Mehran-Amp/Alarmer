@@ -30,7 +30,7 @@ class BitgetExchange implements Exchange {
   String get name => 'Bitget';
 
   @override
-  ExchangeCategory get category => ExchangeCategory.globalSpot;
+  ExchangeCategory get category => ExchangeCategory.tier1;
 
   @override
   String get countryBadge => '🌐 Global';

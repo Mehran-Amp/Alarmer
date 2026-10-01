@@ -5,6 +5,7 @@ import '../../../../core/constants/strings.dart';
 import '../../../../core/localization/app_strings.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/utils/crypto_icons.dart';
+import '../../../../core/utils/format_utils.dart';
 import '../../alert_engine/models/alert_rule.dart';
 import '../../alert_engine/models/trigger_mode.dart';
 import '../../alert_engine/repositories/json_alert_rule_repository.dart';
@@ -427,7 +428,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          displayPrice != null ? _formatPrice(displayPrice) : '---',
+                          displayPrice != null ? FormatUtils.formatPrice(displayPrice, currencySymbol: rule.counterCurrency) : '---',
                           style: TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w800,
@@ -784,7 +785,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
         final dirStr = rule.direction == AlertDirection.above
             ? (isFa ? 'صعود به بالای' : 'Crosses above')
             : (rule.direction == AlertDirection.below ? (isFa ? 'سقوط به زیر' : 'Drops below') : (isFa ? 'رسیدن به' : 'Reaches'));
-        return '$dirStr ${_formatPrice(rule.targetPrice ?? 0)}';
+        return '$dirStr ${FormatUtils.formatPrice(rule.targetPrice ?? 0, currencySymbol: rule.counterCurrency)}';
 
       case AlertConditionType.percentChange:
         final p = rule.percent ?? 0;
@@ -794,7 +795,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
         return '$dirStr ${p.toStringAsFixed(1)}%';
 
       case AlertConditionType.absolutePriceChange:
-        return '${isFa ? "تغییر" : "Changes by"} ${_formatPrice(rule.deltaAbsolute ?? 0)}';
+        return '${isFa ? "تغییر" : "Changes by"} ${FormatUtils.formatPrice(rule.deltaAbsolute ?? 0, currencySymbol: rule.counterCurrency)}';
 
       case AlertConditionType.volumeChange:
         return '${isFa ? "جهش حجم" : "Volume jump"} ${(rule.volumePercent ?? 0).toStringAsFixed(1)}%';

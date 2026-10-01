@@ -1,4 +1,5 @@
 import '../base/currency_pair.dart';
+import '../base/currency_pairs_helper.dart';
 import '../base/exchange.dart';
 import '../base/models/price_snapshot.dart';
 
@@ -8,6 +9,7 @@ import '../base/models/price_snapshot.dart';
 class ExchangeRegistry {
   final Map<String, Exchange> _exchanges = {};
   final Map<String, List<CurrencyPair>> _cachedPairsByExchange = {};
+  final Map<String, CurrencyPairsHelper> _cachedHelpersByExchange = {};
 
   ExchangeRegistry();
 
@@ -42,6 +44,19 @@ class ExchangeRegistry {
     return await refreshCurrencyPairs(exchangeId);
   }
 
+  /// Returns a CurrencyPairsHelper instance for smart filtering
+  Future<CurrencyPairsHelper> getPairsHelper(String exchangeId) async {
+    final cachedHelper = _cachedHelpersByExchange[exchangeId];
+    if (cachedHelper != null && !cachedHelper.isEmpty) {
+      return cachedHelper;
+    }
+
+    final pairs = await getCurrencyPairs(exchangeId);
+    final helper = CurrencyPairsHelper(pairs: pairs);
+    _cachedHelpersByExchange[exchangeId] = helper;
+    return helper;
+  }
+
   /// Force refresh currency pairs from the specified exchange
   Future<List<CurrencyPair>> refreshCurrencyPairs(String exchangeId) async {
     final exchange = _exchanges[exchangeId];
@@ -50,8 +65,10 @@ class ExchangeRegistry {
     }
 
     _cachedPairsByExchange.remove(exchangeId);
+    _cachedHelpersByExchange.remove(exchangeId);
     final pairs = await exchange.fetchCurrencyPairs();
     _cachedPairsByExchange[exchangeId] = pairs;
+    _cachedHelpersByExchange[exchangeId] = CurrencyPairsHelper(pairs: pairs);
     return pairs;
   }
 
