@@ -494,7 +494,193 @@ class GlobalStocksExchange implements Exchange {
     },
 
     // =========================================================================
-    // 7. THE 100 LARGEST COMPANIES BY MARKET CAP (CompaniesMarketCap.com 1-100)
+    // 7. AEROSPACE, DEFENSE & COMMERCIAL SPACE (فضا، استارلینک، ماهواره و هوافضا)
+    // =========================================================================
+    {
+      'symbol': 'SPACEX',
+      'name': 'SpaceX (Space Exploration Technologies & Starlink)',
+      'nameFa': 'اسپیس‌ایکس (فناوری‌های فضایی، موشک استارشیپ و اینترنت ماهواره‌ای استارلینک)',
+      'cat': 'Aerospace',
+      'icon': '🚀',
+      'price': 112.0,
+      'isTop100': true,
+    },
+    {
+      'symbol': 'DXYZ',
+      'name': 'Destiny Tech100 Inc. (SpaceX & OpenAI Portfolio ETF)',
+      'nameFa': 'صندوق سرنوشت ۱۰۰ (سبد سهام عمومی اسپیس‌ایکس و اوپن‌ای‌آی در بورس نیویورک)',
+      'cat': 'Aerospace',
+      'icon': '🌌',
+      'price': 18.50,
+    },
+    {
+      'symbol': 'RKLB',
+      'name': 'Rocket Lab USA Inc.',
+      'nameFa': 'راکت لب (پرتاب‌های فضایی مداری تجاری و ماهواره‌های ناسا)',
+      'cat': 'Aerospace',
+      'icon': '🛰️',
+      'price': 10.45,
+    },
+    {
+      'symbol': 'ASTS',
+      'name': 'AST SpaceMobile Inc.',
+      'nameFa': 'ای‌اس‌تی اسپیس‌موبایل (شبکه پهن‌باند ماهواره‌ای مستقیم به گوشی‌های هوشمند)',
+      'cat': 'Aerospace',
+      'icon': '📡',
+      'price': 26.80,
+    },
+    {
+      'symbol': 'LUNR',
+      'name': 'Intuitive Machines Inc.',
+      'nameFa': 'اینتیوتیو ماشینز (فرودگرهای رباتیک ماه و ماموریت‌های آرتمیس ناسا)',
+      'cat': 'Aerospace',
+      'icon': '🌕',
+      'price': 8.35,
+    },
+    {
+      'symbol': 'BA',
+      'name': 'The Boeing Company',
+      'nameFa': 'بوئینگ (غول هواپیماسازی، فضاپیما و کپسول فضایی استارلاینر)',
+      'cat': 'Aerospace',
+      'icon': '✈️',
+      'price': 155.20,
+      'isTop100': true,
+    },
+    {
+      'symbol': 'NOC',
+      'name': 'Northrop Grumman Corporation',
+      'nameFa': 'نورثروپ گرومن (تلسکوپ فضایی جیمز وب، بمب‌افکن B-21 و سامانه‌های فضایی)',
+      'cat': 'Aerospace',
+      'icon': '🛡️',
+      'price': 512.40,
+    },
+    {
+      'symbol': 'SPCE',
+      'name': 'Virgin Galactic Holdings Inc.',
+      'nameFa': 'ویرجین گلکتیک (گردشگری فضایی تجاری زیرمداری)',
+      'cat': 'Aerospace',
+      'icon': '👨‍🚀',
+      'price': 7.15,
+    },
+
+    // =========================================================================
+    // 8. PRE-IPO UNICORNS & FRONTIER AI GIANTS (غول‌های فناوری خصوصی و پیش‌عرضه اولیه)
+    // =========================================================================
+    {
+      'symbol': 'OPENAI',
+      'name': 'OpenAI (ChatGPT & Frontier AI Labs Benchmark)',
+      'nameFa': 'اوپن‌ای‌آی (خالق چت‌جی‌پی‌تی و پیشتاز جهانی هوش مصنوعی عمومی AGI)',
+      'cat': 'PreIPO',
+      'icon': '🧠',
+      'price': 150.0,
+      'isTop100': true,
+    },
+    {
+      'symbol': 'ANTHROPIC',
+      'name': 'Anthropic (Claude AI Research & Safety)',
+      'nameFa': 'انتروپیک (خالق هوش مصنوعی کلود Claude و مدل‌های پیشرفته ایمن زبانی)',
+      'cat': 'PreIPO',
+      'icon': '🤖',
+      'price': 85.0,
+    },
+    {
+      'symbol': 'STRIPE',
+      'name': 'Stripe Inc. (Global Payments & Crypto Rails)',
+      'nameFa': 'استریپ (بزرگ‌ترین زیرساخت پرداخت اینترنتی و تسویه مالی جهان)',
+      'cat': 'PreIPO',
+      'icon': '💳',
+      'price': 32.50,
+    },
+    {
+      'symbol': 'BYTEDANCE',
+      'name': 'ByteDance Ltd. (TikTok & Douyin Global)',
+      'nameFa': 'بایت‌دنس (مالک تیک‌تاک و غول الگوریتم‌های هوش مصنوعی و ویدیو)',
+      'cat': 'PreIPO',
+      'icon': '🎵',
+      'price': 175.0,
+    },
+    {
+      'symbol': 'DATABRICKS',
+      'name': 'Databricks Inc. (Data Intelligence & Apache Spark)',
+      'nameFa': 'دیتابریکس (پلتفرم یکپارچه داده، دریاچه داده و هوش مصنوعی شرکتی)',
+      'cat': 'PreIPO',
+      'icon': '🧱',
+      'price': 78.0,
+    },
+
+    // =========================================================================
+    // 9. CRYPTO MINING, BLOCKCHAIN TREASURY & FINTECH (استخراج بیت‌کوین و فین‌تک)
+    // =========================================================================
+    {
+      'symbol': 'MARA',
+      'name': 'MARA Holdings Inc. (Marathon Digital)',
+      'nameFa': 'ماراتون دیجیتال / MARA (بزرگ‌ترین شرکت عمومی استخراج و خزانه‌داری بیت‌کوین)',
+      'cat': 'FintechMining',
+      'icon': '⛏️',
+      'price': 18.90,
+    },
+    {
+      'symbol': 'RIOT',
+      'name': 'Riot Platforms Inc.',
+      'nameFa': 'رایوت پلتفرمز (زیرساخت دیتاسنتر و مزارع استخراج بیت‌کوین)',
+      'cat': 'FintechMining',
+      'icon': '⚡',
+      'price': 9.85,
+    },
+    {
+      'symbol': 'CLSK',
+      'name': 'CleanSpark Inc.',
+      'nameFa': 'کلین‌اسپارک (استخراج سبز و پربازده بیت‌کوین با انرژی پاک)',
+      'cat': 'FintechMining',
+      'icon': '🔋',
+      'price': 12.40,
+    },
+    {
+      'symbol': 'HOOD',
+      'name': 'Robinhood Markets Inc.',
+      'nameFa': 'رابین‌هود (کارگزاری پیشرو معامله سهام، آپشن و کریپتو)',
+      'cat': 'FintechMining',
+      'icon': '🏹',
+      'price': 27.30,
+    },
+    {
+      'symbol': 'RDDT',
+      'name': 'Reddit Inc.',
+      'nameFa': 'ردیت (انجمن بزرگ گفتگوی وب و مرجع داده‌های آموزش هوش مصنوعی)',
+      'cat': 'FintechMining',
+      'icon': '🤖',
+      'price': 82.60,
+    },
+    {
+      'symbol': 'SHOP',
+      'name': 'Shopify Inc.',
+      'nameFa': 'شاپیفای (غول تجارت الکترونیک و فروشگاه‌ساز آنلاین جهانی)',
+      'cat': 'Top100',
+      'icon': '🛍️',
+      'price': 81.40,
+      'isTop100': true,
+    },
+    {
+      'symbol': 'SNOW',
+      'name': 'Snowflake Inc.',
+      'nameFa': 'اسنوفلیک (انبار داده‌های کلاد ابری و تحلیل داده‌های هوش مصنوعی)',
+      'cat': 'Top100',
+      'icon': '❄️',
+      'price': 118.50,
+      'isTop100': true,
+    },
+    {
+      'symbol': 'RACE',
+      'name': 'Ferrari N.V.',
+      'nameFa': 'فراری (نماد سوپراسپرت‌های لوکس ایتالیا و فرمول یک)',
+      'cat': 'Top100',
+      'icon': '🏎️',
+      'price': 462.80,
+      'isTop100': true,
+    },
+
+    // =========================================================================
+    // 10. THE 100 LARGEST COMPANIES BY MARKET CAP (CompaniesMarketCap.com 1-100)
     // =========================================================================
     {
       'symbol': 'NVDA',

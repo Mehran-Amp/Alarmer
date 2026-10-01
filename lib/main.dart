@@ -11,6 +11,7 @@ import 'features/alert_engine/repositories/json_alert_rule_repository.dart';
 import 'features/alert_engine/scheduler/scheduler_service.dart';
 import 'features/exchanges/registry/exchange_catalog.dart';
 import 'features/exchanges/registry/exchange_registry.dart';
+import 'features/notifications/background/background_service_manager.dart';
 import 'features/notifications/repositories/notification_repository.dart';
 import 'features/notifications/services/notification_service.dart';
 import 'features/settings/models/app_settings.dart';
@@ -20,9 +21,10 @@ void main() async {
   // 1. Ensure Flutter engine and native bindings are fully initialized
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 2. Initialize System Notification Service
+  // 2. Initialize System Notification Service & Background Foreground Service
   final notificationService = NotificationService();
   await notificationService.initialize();
+  await BackgroundServiceManager.initializeService();
 
   // 3. Initialize Local-First Repositories (Alerts + Notification History + Settings)
   final dir = await getApplicationDocumentsDirectory();

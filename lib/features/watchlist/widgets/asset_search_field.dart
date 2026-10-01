@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../../core/localization/app_strings.dart';
 import '../../../../core/theme/tokens.dart';
 import '../../../../core/utils/crypto_icons.dart';
 import '../../exchanges/base/currency_pair.dart';
 import '../../exchanges/registry/exchange_registry.dart';
+import '../../settings/services/settings_service.dart';
 
 class SearchResultItem {
   final CurrencyPair pair;
@@ -95,6 +98,8 @@ class _AssetSearchFieldState extends State<AssetSearchField> {
 
   @override
   Widget build(BuildContext context) {
+    final lang = context.watch<SettingsService>().settings.language;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -104,7 +109,7 @@ class _AssetSearchFieldState extends State<AssetSearchField> {
           autofocus: true,
           style: AppTokens.body,
           decoration: InputDecoration(
-            hintText: 'Search coin or pair (e.g. BTC, ETH, SOL, PEPE)...',
+            hintText: AppStrings.get('search_crypto_hint', lang),
             hintStyle: AppTokens.bodySecondary,
             prefixIcon: const Icon(Icons.search_rounded, color: AppTokens.primary),
             suffixIcon: _isSearching
@@ -135,7 +140,7 @@ class _AssetSearchFieldState extends State<AssetSearchField> {
 
         // Popular Coin Chips
         Text(
-          'Popular Cryptocurrencies (ارزهای محبوب):',
+          AppStrings.get('popular_cryptos', lang),
           style: AppTokens.caption.copyWith(color: AppTokens.textSecondary, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: AppTokens.space8),
@@ -195,7 +200,7 @@ class _AssetSearchFieldState extends State<AssetSearchField> {
                   ),
                   subtitle: Row(
                     children: [
-                      const Text('Sources: ', style: AppTokens.caption),
+                      Text('${AppStrings.get('exchange', lang)}: ', style: AppTokens.caption),
                       ...item.availableExchangeIds.map((ex) => Container(
                             margin: const EdgeInsets.only(right: AppTokens.space4),
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),

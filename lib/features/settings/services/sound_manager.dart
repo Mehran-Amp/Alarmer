@@ -5,6 +5,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
+import '../../../core/localization/app_strings.dart';
 
 class AlarmSoundPreset {
   final String id;
@@ -24,6 +25,10 @@ class AlarmSoundPreset {
     required this.secondaryFreq,
     this.durationSec = 2.5,
   });
+
+  String getTitle(String lang) {
+    return AppStrings.get('sound_${id}_title', lang);
+  }
 }
 
 /// High-Performance Audio Engine for Market Alerts

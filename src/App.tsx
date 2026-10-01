@@ -61,6 +61,7 @@ interface AlertRule {
   lastCheckedPrice?: number;
   isActive: boolean;
   isTriggered: boolean;
+  customNote?: string;
   lastCheckedAt?: Date;
   lastTriggeredAt?: Date;
   triggerCount: number;
@@ -79,7 +80,7 @@ interface NotificationItem {
 }
 
 type ExchangeCategoryType = 'all' | 'tier1' | 'aggregator' | 'middleEast' | 'asia' | 'europe' | 'americas';
-type ThemeModeType = 'dark-green' | 'light-green' | 'dark-orange' | 'light-orange';
+type ThemeModeType = 'dark-green' | 'light-green' | 'dark-orange' | 'light-orange' | 'dark-purple-blue' | 'light-purple-blue';
 
 interface ExchangeInfo {
   id: string;
@@ -204,6 +205,31 @@ const MACRO_ASSETS: Record<string, MacroAssetMeta> = {
   META: { symbol: 'META', name: 'Meta Platforms (Facebook)', nameFa: 'سهام متا (فیسبوک)', category: 'stock', marketName: 'NASDAQ', icon: 'https://companiesmarketcap.com/img/company-logos/64/META.png', currentPrice: 585.20, unit: '$', change24h: 2.1 },
   PLTR: { symbol: 'PLTR', name: 'Palantir Technologies', nameFa: 'سهام پالانتیر (Palantir)', category: 'stock', marketName: 'NYSE', icon: 'https://companiesmarketcap.com/img/company-logos/64/PLTR.png', currentPrice: 44.10, unit: '$', change24h: 5.6 },
   BRKB: { symbol: 'BRK.B', name: 'Berkshire Hathaway', nameFa: 'برکشایر هاتاوی (وارن بافت)', category: 'stock', marketName: 'NYSE', icon: 'https://companiesmarketcap.com/img/company-logos/64/BRK-B.png', currentPrice: 462.10, unit: '$', change24h: 0.5 },
+
+  // Commercial Space, Aerospace & Starlink
+  SPACEX: { symbol: 'SPACEX', name: 'SpaceX (Starlink & Space Exploration)', nameFa: 'اسپیس‌ایکس (فناوری‌های فضایی، استارشیپ و استارلینک ایلان ماسک)', category: 'stock', marketName: 'Pre-IPO Benchmark', icon: 'https://cdn-icons-png.flaticon.com/512/3209/3209994.png', currentPrice: 112.00, unit: '$', change24h: 4.8 },
+  DXYZ: { symbol: 'DXYZ', name: 'Destiny Tech100 (SpaceX & OpenAI ETF)', nameFa: 'صندوق سرنوشت ۱۰۰ (سبد سهام عمومی اسپیس‌ایکس و اوپن‌ای‌آی)', category: 'stock', marketName: 'NYSE', icon: 'https://cdn-icons-png.flaticon.com/512/3209/3209994.png', currentPrice: 18.50, unit: '$', change24h: 6.2 },
+  RKLB: { symbol: 'RKLB', name: 'Rocket Lab USA', nameFa: 'راکت لب (پرتاب‌های فضایی مداری تجاری و ماهواره‌های ناسا)', category: 'stock', marketName: 'NASDAQ', icon: 'https://companiesmarketcap.com/img/company-logos/64/RKLB.png', currentPrice: 10.45, unit: '$', change24h: 3.1 },
+  ASTS: { symbol: 'ASTS', name: 'AST SpaceMobile', nameFa: 'ای‌اس‌تی اسپیس‌موبایل (شبکه پهن‌باند ماهواره‌ای به گوشی هوشمند)', category: 'stock', marketName: 'NASDAQ', icon: 'https://companiesmarketcap.com/img/company-logos/64/ASTS.png', currentPrice: 26.80, unit: '$', change24h: 8.5 },
+  BA: { symbol: 'BA', name: 'The Boeing Company', nameFa: 'بوئینگ (غول هواپیماسازی، فضاپیما و کپسول فضایی استارلاینر)', category: 'stock', marketName: 'NYSE', icon: 'https://companiesmarketcap.com/img/company-logos/64/BA.png', currentPrice: 155.20, unit: '$', change24h: -0.8 },
+
+  // Frontier AI & Pre-IPO Giants
+  OPENAI: { symbol: 'OPENAI', name: 'OpenAI (ChatGPT & Frontier AI)', nameFa: 'اوپن‌ای‌آی (خالق چت‌جی‌پی‌تی و پیشتاز هوش مصنوعی عمومی AGI)', category: 'stock', marketName: 'Pre-IPO Benchmark', icon: 'https://cdn-icons-png.flaticon.com/512/12222/12222560.png', currentPrice: 150.00, unit: '$', change24h: 5.0 },
+  ANTHROPIC: { symbol: 'ANTHROPIC', name: 'Anthropic (Claude AI)', nameFa: 'انتروپیک (خالق هوش مصنوعی کلود Claude)', category: 'stock', marketName: 'Pre-IPO Benchmark', icon: 'https://cdn-icons-png.flaticon.com/512/8649/8649607.png', currentPrice: 85.00, unit: '$', change24h: 3.7 },
+  STRIPE: { symbol: 'STRIPE', name: 'Stripe Payments', nameFa: 'استریپ (زیرساخت پرداخت اینترنتی و تسویه رمزارزی جهان)', category: 'stock', marketName: 'Pre-IPO Benchmark', icon: 'https://companiesmarketcap.com/img/company-logos/64/STRIP.png', currentPrice: 32.50, unit: '$', change24h: 1.8 },
+  BYTEDANCE: { symbol: 'BYTEDANCE', name: 'ByteDance (TikTok)', nameFa: 'بایت‌دنس (مالک تیک‌تاک و غول الگوریتم‌های هوش مصنوعی)', category: 'stock', marketName: 'Pre-IPO Benchmark', icon: 'https://cdn-icons-png.flaticon.com/512/3046/3046121.png', currentPrice: 175.00, unit: '$', change24h: 2.4 },
+
+  // Crypto Mining & Fintech Stocks
+  MSTR: { symbol: 'MSTR', name: 'MicroStrategy Inc.', nameFa: 'میکرواستراتژی (بزرگ‌ترین خزانه‌داری بیت‌کوین سازمانی)', category: 'stock', marketName: 'NASDAQ', icon: 'https://companiesmarketcap.com/img/company-logos/64/MSTR.png', currentPrice: 215.30, unit: '$', change24h: 7.4 },
+  COIN: { symbol: 'COIN', name: 'Coinbase Global Inc.', nameFa: 'کوین‌بیس (بزرگ‌ترین صرافی مجاز کریپتو آمریکا)', category: 'stock', marketName: 'NASDAQ', icon: 'https://companiesmarketcap.com/img/company-logos/64/COIN.png', currentPrice: 212.80, unit: '$', change24h: 4.2 },
+  MARA: { symbol: 'MARA', name: 'MARA Holdings (Marathon)', nameFa: 'ماراتون دیجیتال / MARA (بزرگ‌ترین استخراج‌کننده بیت‌کوین)', category: 'stock', marketName: 'NASDAQ', icon: 'https://companiesmarketcap.com/img/company-logos/64/MARA.png', currentPrice: 18.90, unit: '$', change24h: 6.8 },
+  RIOT: { symbol: 'RIOT', name: 'Riot Platforms Inc.', nameFa: 'رایوت پلتفرمز (زیرساخت استخراج و مزارع بیت‌کوین)', category: 'stock', marketName: 'NASDAQ', icon: 'https://companiesmarketcap.com/img/company-logos/64/RIOT.png', currentPrice: 9.85, unit: '$', change24h: 5.1 },
+  CLSK: { symbol: 'CLSK', name: 'CleanSpark Inc.', nameFa: 'کلین‌اسپارک (استخراج سبز و پربازده بیت‌کوین)', category: 'stock', marketName: 'NASDAQ', icon: 'https://companiesmarketcap.com/img/company-logos/64/CLSK.png', currentPrice: 12.40, unit: '$', change24h: 4.9 },
+  HOOD: { symbol: 'HOOD', name: 'Robinhood Markets', nameFa: 'رابین‌هود (کارگزاری معامله سهام و رمزارز)', category: 'stock', marketName: 'NASDAQ', icon: 'https://companiesmarketcap.com/img/company-logos/64/HOOD.png', currentPrice: 27.30, unit: '$', change24h: 3.3 },
+  RDDT: { symbol: 'RDDT', name: 'Reddit Inc.', nameFa: 'ردیت (انجمن وب و مرجع داده‌های آموزش AI)', category: 'stock', marketName: 'NYSE', icon: 'https://companiesmarketcap.com/img/company-logos/64/RDDT.png', currentPrice: 82.60, unit: '$', change24h: 8.9 },
+  SHOP: { symbol: 'SHOP', name: 'Shopify Inc.', nameFa: 'شاپیفای (فروشگاه‌ساز آنلاین جهانی)', category: 'stock', marketName: 'NYSE', icon: 'https://companiesmarketcap.com/img/company-logos/64/SHOP.png', currentPrice: 81.40, unit: '$', change24h: 2.3 },
+  SNOW: { symbol: 'SNOW', name: 'Snowflake Inc.', nameFa: 'اسنوفلیک (انبار داده‌های کلاد هوش مصنوعی)', category: 'stock', marketName: 'NYSE', icon: 'https://companiesmarketcap.com/img/company-logos/64/SNOW.png', currentPrice: 118.50, unit: '$', change24h: 1.7 },
+  RACE: { symbol: 'RACE', name: 'Ferrari N.V.', nameFa: 'فراری (سوپراسپرت‌های لوکس ایتالیا)', category: 'stock', marketName: 'NYSE', icon: 'https://companiesmarketcap.com/img/company-logos/64/RACE.png', currentPrice: 462.80, unit: '$', change24h: 0.9 },
 
   // Commodities
   GOLD: { symbol: 'XAU/USD', name: 'Gold Spot', nameFa: 'انس طلای جهانی (Gold XAU/USD)', category: 'commodity', marketName: 'Commodities', icon: 'https://cdn-icons-png.flaticon.com/512/2583/2583344.png', currentPrice: 2735.40, unit: '$', change24h: 0.75 },
@@ -357,22 +383,22 @@ export default function App() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([
     {
       id: 'notif-1',
-      title: '🚨 جهش در بازده اوراق ۱۰ ساله آمریکا (US10Y)',
-      body: 'بازده اوراق ۱۰ ساله به ۴.۲۸٪ رسید (+۱.۱٪ نوسان). قیمت مبنا به‌روزرسانی شد.',
+      title: '🟢 BTC/USDT +3.52% Live Price ▲',
+      body: '📝 Target reached on Binance',
       timestamp: new Date(Date.now() - 90000),
-      ruleUuid: 'rule-us10y-macro',
-      marketSymbol: 'US10Y',
-      value: '4.28%',
-      exchange: 'US Treasury',
-    },
-    {
-      id: 'notif-2',
-      title: '🚨 جهش قیمت بیت‌کوین (BTC/USDT)',
-      body: 'قیمت +۲.۶٪ تغییر کرد و به ۸۳,۷۷۰$ رسید.',
-      timestamp: new Date(Date.now() - 180000),
       ruleUuid: 'rule-btc-crypto',
       marketSymbol: 'BTC/USDT',
       value: '$83,770',
+      exchange: 'Binance',
+    },
+    {
+      id: 'notif-2',
+      title: '🔴 ETH/USDT -3.52% Live Price ▼',
+      body: '📝 Support level broken',
+      timestamp: new Date(Date.now() - 180000),
+      ruleUuid: 'rule-eth-crypto',
+      marketSymbol: 'ETH/USDT',
+      value: '$3,120',
       exchange: 'Binance',
     }
   ]);
@@ -494,19 +520,30 @@ export default function App() {
       }
 
       if (triggered) {
-        const sign = actualPercent >= 0 ? '+' : '';
-        title = `🚨 ${nameFa} ${sign}${actualPercent.toFixed(2)}% نوسان`;
-        body = `قیمت ${rule.marketSymbol} در ${rule.exchangeName} به میزان ${sign}${actualPercent.toFixed(2)}% تغییر کرد و به ${unit}${newPrice.toLocaleString()} رسید. قیمت مبنا به‌روز شد.`;
+        const isUpward = actualPercent >= 0;
+        const emoji = isUpward ? '🟢' : '🔴';
+        const arrow = isUpward ? '▲' : '▼';
+        const sign = isUpward ? '+' : '-';
+        title = `${emoji} ${rule.marketSymbol} ${sign}${Math.abs(actualPercent).toFixed(2)}% Live Price ${arrow}`;
+        body = rule.customNote && rule.customNote.trim() 
+          ? (rule.customNote.startsWith('📝') ? rule.customNote : `📝 ${rule.customNote}`)
+          : `📝 Live Price: ${unit}${newPrice.toLocaleString()}`;
       }
     } else if (rule.conditionType === 'PRICE_THRESHOLD') {
       if (rule.direction === 'ABOVE' && newPrice >= rule.targetValue) {
         triggered = true;
-        title = `🎯 هدف صعودی ${nameFa} لمس شد`;
-        body = `قیمت ${rule.marketSymbol} به ${unit}${newPrice.toLocaleString()} رسید.`;
+        const pct = ((newPrice - rule.basePrice) / rule.basePrice) * 100;
+        title = `🟢 ${rule.marketSymbol} +${Math.abs(pct).toFixed(2)}% Live Price ▲`;
+        body = rule.customNote && rule.customNote.trim() 
+          ? (rule.customNote.startsWith('📝') ? rule.customNote : `📝 ${rule.customNote}`)
+          : `📝 Live Price: ${unit}${newPrice.toLocaleString()}`;
       } else if (rule.direction === 'BELOW' && newPrice <= rule.targetValue) {
         triggered = true;
-        title = `🎯 کف ${nameFa} شکسته شد`;
-        body = `قیمت ${rule.marketSymbol} به ${unit}${newPrice.toLocaleString()} رسید.`;
+        const pct = ((newPrice - rule.basePrice) / rule.basePrice) * 100;
+        title = `🔴 ${rule.marketSymbol} -${Math.abs(pct).toFixed(2)}% Live Price ▼`;
+        body = rule.customNote && rule.customNote.trim() 
+          ? (rule.customNote.startsWith('📝') ? rule.customNote : `📝 ${rule.customNote}`)
+          : `📝 Live Price: ${unit}${newPrice.toLocaleString()}`;
       }
     }
 
@@ -697,11 +734,26 @@ export default function App() {
   };
 
   const isOrange = appTheme.includes('orange');
+  const isPurpleBlue = appTheme.includes('purple-blue');
   const isLight = appTheme.startsWith('light');
 
-  const accentClass = isOrange ? 'text-orange-400' : 'text-emerald-400';
-  const accentBgClass = isOrange ? 'bg-orange-500 hover:bg-orange-400' : 'bg-emerald-500 hover:bg-emerald-400';
-  const accentSubtleClass = isOrange ? 'bg-orange-500/10 border-orange-500/20 text-orange-400' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400';
+  const accentClass = isPurpleBlue
+    ? 'text-violet-400'
+    : isOrange
+    ? 'text-orange-400'
+    : 'text-emerald-400';
+
+  const accentBgClass = isPurpleBlue
+    ? 'bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-bold'
+    : isOrange
+    ? 'bg-orange-500 hover:bg-orange-400 text-slate-950 font-bold'
+    : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold';
+
+  const accentSubtleClass = isPurpleBlue
+    ? 'bg-violet-500/10 border-violet-500/20 text-violet-400'
+    : isOrange
+    ? 'bg-orange-500/10 border-orange-500/20 text-orange-400'
+    : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400';
 
   // Filtered 40+ Exchanges
   const filteredExchanges = ALL_EXCHANGES.filter((ex) => {
@@ -794,19 +846,33 @@ export default function App() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Left: Interactive Phone Screen */}
           <div className="lg:col-span-7 flex justify-center">
-            <div className={`w-full max-w-[400px] h-[800px] ${isLight ? 'bg-slate-50 border-slate-300' : 'bg-slate-950 border-slate-800'} border-[8px] rounded-[48px] shadow-2xl flex flex-col overflow-hidden relative ring-1 ring-slate-700/50`}>
+            <div className={`w-full max-w-[400px] h-[800px] ${
+              isLight 
+                ? (isPurpleBlue ? 'bg-[#f5f6ff] border-indigo-200 shadow-indigo-200/50' : 'bg-slate-50 border-slate-300') 
+                : (isPurpleBlue ? 'bg-[#0b0d1b] border-[#2e365e] shadow-purple-950/50' : 'bg-slate-950 border-slate-800')
+            } border-[8px] rounded-[48px] shadow-2xl flex flex-col overflow-hidden relative ring-1 ring-slate-700/50`}>
               {/* Dynamic Island */}
               <div className={`absolute top-2 left-1/2 -translate-x-1/2 h-5 w-28 ${isLight ? 'bg-slate-300' : 'bg-slate-900'} rounded-full z-30 flex items-center justify-center`}>
                 <div className={`h-2 w-12 ${isLight ? 'bg-slate-400' : 'bg-slate-950'} rounded-full`} />
               </div>
 
               {/* Status Bar */}
-              <div className="pt-3 px-6 pb-2 flex justify-between items-center text-[10px] text-slate-400 font-mono z-20">
+              <div className="pt-3 px-6 pb-1 flex justify-between items-center text-[10px] text-slate-400 font-mono z-20">
                 <span>12:40</span>
                 <div className="flex items-center gap-1.5">
                   <span className={`font-semibold text-[9px] ${accentClass}`}>40+ EXCHANGES • US BONDS</span>
-                  <span className={`h-1.5 w-1.5 rounded-full ${isOrange ? 'bg-orange-500' : 'bg-emerald-400'} animate-pulse`} />
+                  <span className={`h-1.5 w-1.5 rounded-full ${isPurpleBlue ? 'bg-violet-400' : isOrange ? 'bg-orange-500' : 'bg-emerald-400'} animate-pulse`} />
                 </div>
+              </div>
+
+              {/* Minimal Height Persistent Background Service Notification */}
+              <div className="mx-3 mb-1 px-2.5 py-1 rounded-lg bg-slate-900/90 border border-slate-800 text-[10px] flex items-center justify-between shadow-sm z-20">
+                <div className="flex items-center gap-1.5">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400"></span>
+                  <span className="font-bold text-slate-200">Alarmer</span>
+                  <span className="text-slate-400">• ● Active</span>
+                </div>
+                <span className="text-[9px] text-slate-500 font-mono">Foreground</span>
               </div>
 
               {/* Phone App Header */}
@@ -1067,13 +1133,15 @@ export default function App() {
                     {/* Themes (4 Palettes) */}
                     <div className={`p-3.5 rounded-2xl border ${isLight ? 'bg-white border-slate-200 shadow-sm' : 'bg-slate-900 border-slate-800'} space-y-2.5`}>
                       <div className="flex items-center gap-2 font-bold text-xs">
-                        <Palette className="h-4 w-4 text-emerald-400" />
-                        <span>پوسته و تم رنگی (۴ حالت)</span>
+                        <Palette className={`h-4 w-4 ${accentClass}`} />
+                        <span>پوسته و تم رنگی (۶ حالت)</span>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
                         {[
                           { id: 'dark-green', name: 'دارک سبز (پیش‌فرض)', bg: '#020617', border: '#10B981' },
                           { id: 'light-green', name: 'لایت سبز', bg: '#F8FAFC', border: '#059669' },
+                          { id: 'dark-purple-blue', name: 'دارک بنفش آبی 💜💙', bg: '#0B0D1B', border: '#8B5CF6' },
+                          { id: 'light-purple-blue', name: 'لایت بنفش آبی 💜💙', bg: '#F5F6FF', border: '#7C3AED' },
                           { id: 'dark-orange', name: 'دارک نارنجی', bg: '#0C0A09', border: '#F97316' },
                           { id: 'light-orange', name: 'لایت نارنجی', bg: '#FAFAF9', border: '#EA580C' },
                         ].map((t) => (
@@ -1082,12 +1150,12 @@ export default function App() {
                             onClick={() => setAppTheme(t.id as any)}
                             className={`p-2.5 rounded-xl border text-right text-[11px] flex items-center gap-2 font-semibold transition-all ${
                               appTheme === t.id
-                                ? 'border-emerald-500 bg-emerald-500/10'
+                                ? (isPurpleBlue ? 'border-violet-500 bg-violet-500/15' : isOrange ? 'border-orange-500 bg-orange-500/15' : 'border-emerald-500 bg-emerald-500/15')
                                 : 'border-slate-700 bg-slate-950/50'
                             }`}
                           >
-                            <span className="h-4 w-4 rounded-full border-2" style={{ backgroundColor: t.bg, borderColor: t.border }} />
-                            <span>{t.name}</span>
+                            <span className="h-4 w-4 rounded-full border-2 shrink-0" style={{ backgroundColor: t.bg, borderColor: t.border }} />
+                            <span className="truncate">{t.name}</span>
                           </button>
                         ))}
                       </div>
@@ -1162,6 +1230,23 @@ export default function App() {
                   <SettingsIcon className="h-5 w-5" />
                   <span className="text-[10px]">تنظیمات</span>
                 </button>
+              </div>
+
+              {/* Android Soft Nav Bar with Back Button (Move to Background) */}
+              <div className={`py-1.5 px-10 flex items-center justify-between text-slate-500 ${isLight ? 'bg-slate-100 border-slate-200' : 'bg-slate-950 border-slate-900'} border-t z-20`}>
+                <button
+                  type="button"
+                  title="دکمه برگشت اندروید (انتقال به پس‌زمینه بدون بستن برنامه)"
+                  onClick={() => {
+                    showToast('برنامه به پس‌زمینه منتقل شد؛ پایش و آلارم‌ها بدون وقفه در حال اجرا هستند (● Active)');
+                  }}
+                  className="hover:text-slate-200 transition-colors p-1 flex items-center gap-1 text-[11px] font-mono cursor-pointer"
+                >
+                  <span>◀</span>
+                  <span className="text-[9px] text-slate-400">Back (Background)</span>
+                </button>
+                <div className="h-2 w-2 rounded-full border border-slate-500"></div>
+                <div className="h-2.5 w-2.5 border border-slate-500 rounded-sm"></div>
               </div>
             </div>
           </div>

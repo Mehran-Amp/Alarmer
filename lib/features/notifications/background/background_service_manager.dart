@@ -1,53 +1,62 @@
 import 'dart:async';
 import 'dart:ui';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 /// Configures Android 14+ Foreground Service with FOREGROUND_SERVICE_DATA_SYNC
-/// to keep market monitoring alive while strictly complying with Google Play policies.
+/// using an ultra-compact, minimal-height notification to keep market monitoring alive 24/7
+/// without exhausting or cluttering the user's notification tray.
 class BackgroundServiceManager {
-  static const String notificationChannelId = 'bitcoin_checker_foreground';
-  static const int notificationId = 888;
+  static const String notificationChannelId = 'alarmer_foreground_service';
+  static const int notificationId = 777;
 
   static Future<void> initializeService() async {
-    final service = FlutterBackgroundService();
+    if (kIsWeb) return;
 
-    // Create low-noise persistent notification channel for Android
-    const AndroidNotificationChannel channel = AndroidNotificationChannel(
-      notificationChannelId,
-      'Market Watcher Service',
-      description: 'Persistent background service monitoring active market conditions.',
-      importance: Importance.low,
-    );
+    try {
+      final service = FlutterBackgroundService();
 
-    final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-        FlutterLocalNotificationsPlugin();
+      // Create low-noise, compact persistent notification channel for Android
+      const AndroidNotificationChannel channel = AndroidNotificationChannel(
+        notificationChannelId,
+        'Alarmer Service',
+        description: 'Permanent background monitoring',
+        importance: Importance.low,
+        playSound: false,
+        enableVibration: false,
+        showBadge: false,
+      );
 
-    await flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(channel);
+      final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+          FlutterLocalNotificationsPlugin();
 
-    await service.configure(
-      androidConfiguration: AndroidConfiguration(
-        onStart: onBackgroundServiceStart,
-        autoStart: true,
-        isForegroundMode: true,
-        notificationChannelId: notificationChannelId,
-        initialNotificationTitle: 'BitcoinChecker Active',
-        initialNotificationContent: 'Monitoring financial markets in near real-time...',
-        foregroundServiceNotificationId: notificationId,
-        foregroundServiceTypes: [
-          // Android 14+ explicit foreground service type
-          AndroidForegroundType.dataSync,
-        ],
-      ),
-      iosConfiguration: IosConfiguration(
-        autoStart: true,
-        onForeground: onBackgroundServiceStart,
-        onBackground: onIosBackground,
-      ),
-    );
+      await flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(channel);
+
+      await service.configure(
+        androidConfiguration: AndroidConfiguration(
+          onStart: onBackgroundServiceStart,
+          autoStart: true,
+          isForegroundMode: true,
+          notificationChannelId: notificationChannelId,
+          initialNotificationTitle: 'Alarmer',
+          initialNotificationContent: '● Active',
+          foregroundServiceNotificationId: notificationId,
+          foregroundServiceTypes: [
+            // Android 14+ explicit foreground service type
+            AndroidForegroundType.dataSync,
+          ],
+        ),
+        iosConfiguration: IosConfiguration(
+          autoStart: true,
+          onForeground: onBackgroundServiceStart,
+          onBackground: onIosBackground,
+        ),
+      );
+    } catch (_) {}
   }
 
   @pragma('vm:entry-point')
@@ -64,13 +73,21 @@ class BackgroundServiceManager {
       service.stopSelf();
     });
 
-    // Keep periodic alive ping for Doze mode resilience
-    Timer.periodic(const Duration(seconds: 30), (timer) async {
+    if (service is AndroidServiceInstance) {
+      service.setAsForegroundService();
+      service.setForegroundNotificationInfo(
+        title: 'Alarmer',
+        content: '● Active',
+      );
+    }
+
+    // Keep periodic alive ping for Doze mode resilience with minimal text
+    Timer.periodic(const Duration(minutes: 1), (timer) async {
       if (service is AndroidServiceInstance) {
         if (await service.isForegroundService()) {
           service.setForegroundNotificationInfo(
-            title: 'BitcoinChecker Active',
-            content: 'Monitoring price alerts (${DateTime.now().toIso8601String().substring(11, 19)})',
+            title: 'Alarmer',
+            content: '● Active',
           );
         }
       }

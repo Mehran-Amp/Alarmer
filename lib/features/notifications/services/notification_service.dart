@@ -59,6 +59,35 @@ class NotificationService {
 
     // Explicitly request notification & alarm permissions on Android 13+ (API 33+)
     await requestPermissions();
+
+    // Show minimal ongoing notification to keep app executing in background
+    await showPersistentServiceNotification();
+  }
+
+  /// Displays an ultra-compact, single-line ongoing notification so Android keeps background tasks running 24/7
+  /// with minimal height so it does not clutter or tire the user.
+  Future<void> showPersistentServiceNotification() async {
+    const androidDetails = AndroidNotificationDetails(
+      'alarmer_foreground_service',
+      'Alarmer Service',
+      channelDescription: 'Permanent background monitoring',
+      importance: Importance.low,
+      priority: Priority.low,
+      ongoing: true,
+      autoCancel: false,
+      showWhen: false,
+      enableVibration: false,
+      playSound: false,
+    );
+    const platformDetails = NotificationDetails(android: androidDetails);
+    try {
+      await _notificationsPlugin.show(
+        777,
+        'Alarmer',
+        '● Active',
+        platformDetails,
+      );
+    } catch (_) {}
   }
 
   /// Request runtime permissions on Android 13+ and iOS

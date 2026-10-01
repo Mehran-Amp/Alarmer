@@ -3,8 +3,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../../core/constants/strings.dart';
+import 'package:provider/provider.dart';
+import '../../../../core/localization/app_strings.dart';
 import '../../../../core/theme/tokens.dart';
+import '../../settings/services/settings_service.dart';
 import '../bloc/alert_rules_bloc.dart';
 import '../bloc/alert_rules_event.dart';
 import '../bloc/alert_rules_state.dart';
@@ -32,7 +34,7 @@ class _AlertListPageState extends State<AlertListPage> {
     super.dispose();
   }
 
-  void _handleSwipeDelete(AlertRule rule) {
+  void _handleSwipeDelete(AlertRule rule, String lang) {
     setState(() {
       _pendingDeleteUuids.add(rule.uuid);
     });
@@ -49,11 +51,11 @@ class _AlertListPageState extends State<AlertListPage> {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${S.alertDeleted}: ${rule.baseCurrency}/${rule.counterCurrency}'),
+        content: Text('${AppStrings.get('alert_deleted_msg', lang)}${rule.baseCurrency}/${rule.counterCurrency}'),
         backgroundColor: theme.colorScheme.surfaceContainerHighest,
         duration: const Duration(seconds: 5),
         action: SnackBarAction(
-          label: S.undo,
+          label: AppStrings.get('undo_action', lang),
           textColor: theme.colorScheme.primary,
           onPressed: () {
             _pendingDeleteTimers[rule.uuid]?.cancel();
@@ -67,7 +69,7 @@ class _AlertListPageState extends State<AlertListPage> {
     );
   }
 
-  Future<void> _showRearmConfirmation(BuildContext context, AlertRule rule) async {
+  Future<void> _showRearmConfirmation(BuildContext context, AlertRule rule, String lang) async {
     final theme = Theme.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
@@ -75,17 +77,17 @@ class _AlertListPageState extends State<AlertListPage> {
         backgroundColor: theme.colorScheme.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
-          S.rearmConfirmTitle,
+          AppStrings.get('rearm_dialog_title', lang),
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: theme.colorScheme.onSurface),
         ),
         content: Text(
-          S.rearmConfirmBody,
+          AppStrings.get('rearm_dialog_body', lang),
           style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurface.withValues(alpha: 0.7)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(S.cancel, style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
+            child: Text(AppStrings.get('cancel', lang), style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.6))),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(ctx).pop(true),
@@ -93,7 +95,7 @@ class _AlertListPageState extends State<AlertListPage> {
               backgroundColor: AppTokens.warning,
               foregroundColor: Colors.white,
             ),
-            child: const Text(S.rearmNow),
+            child: Text(AppStrings.get('rearm_now_btn', lang)),
           ),
         ],
       ),
@@ -104,14 +106,14 @@ class _AlertListPageState extends State<AlertListPage> {
     }
   }
 
-  void _duplicateRule(AlertRule rule) async {
+  void _duplicateRule(AlertRule rule, String lang) async {
     final repo = context.read<JsonAlertRuleRepository>();
     final duplicated = await repo.duplicateRule(rule.uuid);
     if (duplicated != null && mounted) {
       final theme = Theme.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text(S.alertDuplicated),
+          content: Text(AppStrings.get('alert_rule_duplicated', lang)),
           backgroundColor: theme.colorScheme.surfaceContainerHighest,
           duration: const Duration(seconds: 2),
         ),
@@ -119,13 +121,13 @@ class _AlertListPageState extends State<AlertListPage> {
     }
   }
 
-  void _exportSingleRule(AlertRule rule) {
+  void _exportSingleRule(AlertRule rule, String lang) {
     final jsonStr = jsonEncode(rule.toJson());
     Clipboard.setData(ClipboardData(text: jsonStr));
     final theme = Theme.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('Rule JSON copied to clipboard'),
+        content: Text(AppStrings.get('rule_copied', lang)),
         backgroundColor: theme.colorScheme.surfaceContainerHighest,
         duration: const Duration(seconds: 2),
       ),
@@ -135,13 +137,15 @@ class _AlertListPageState extends State<AlertListPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final lang = context.watch<SettingsService>().settings.language;
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: theme.colorScheme.surface,
         elevation: 0,
         title: Text(
-          S.alertListTitle,
+          AppStrings.get('my_alerts', lang),
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: theme.colorScheme.onSurface),
         ),
       ),
@@ -173,12 +177,12 @@ class _AlertListPageState extends State<AlertListPage> {
                     ),
                     const SizedBox(height: AppTokens.space16),
                     Text(
-                      S.noAlertsTitle,
+                      AppStrings.get('empty_alerts_title', lang),
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                     ),
                     const SizedBox(height: AppTokens.space8),
                     Text(
-                      S.noAlertsSubtitle,
+                      AppStrings.get('empty_alerts_desc', lang),
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                     ),
@@ -202,11 +206,11 @@ class _AlertListPageState extends State<AlertListPage> {
                     isActive: isActive,
                   ));
                 },
-                onSwipeDelete: () => _handleSwipeDelete(rule),
-                onRearm: () => _showRearmConfirmation(context, rule),
-                onDuplicate: () => _duplicateRule(rule),
+                onSwipeDelete: () => _handleSwipeDelete(rule, lang),
+                onRearm: () => _showRearmConfirmation(context, rule, lang),
+                onDuplicate: () => _duplicateRule(rule, lang),
                 onEdit: () {},
-                onExport: () => _exportSingleRule(rule),
+                onExport: () => _exportSingleRule(rule, lang),
               );
             },
           );

@@ -1,3 +1,5 @@
+import '../../../core/localization/app_strings.dart';
+
 enum ExchangeCategory {
   all,
   tier1,
@@ -9,23 +11,27 @@ enum ExchangeCategory {
 }
 
 extension ExchangeCategoryExt on ExchangeCategory {
-  String get titleFa {
+  String getTitle(String lang) {
     switch (this) {
       case ExchangeCategory.all:
-        return 'همه صرافی‌های کریپتو';
+        return AppStrings.get('cat_all_exchanges', lang);
       case ExchangeCategory.tier1:
-        return 'جهانی رتبه یک (Tier-1)';
+        return AppStrings.get('cat_tier1', lang);
       case ExchangeCategory.middleEast:
-        return 'ایران و خاورمیانه';
+        return AppStrings.get('cat_middle_east', lang);
       case ExchangeCategory.asia:
-        return 'آسیا و شرق دور';
+        return AppStrings.get('cat_asia', lang);
       case ExchangeCategory.europe:
-        return 'اروپا';
+        return AppStrings.get('cat_europe', lang);
       case ExchangeCategory.americas:
-        return 'آمریکا و سایر';
+        return AppStrings.get('cat_americas', lang);
       case ExchangeCategory.aggregator:
-        return 'مراجع و شاخص‌های تجمیع';
+        return AppStrings.get('cat_aggregator', lang);
     }
+  }
+
+  String get titleFa {
+    return getTitle('fa');
   }
 
   String get icon {

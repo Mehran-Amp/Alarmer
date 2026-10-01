@@ -19,6 +19,7 @@ class SchedulerService {
 
   Timer? _tickTimer;
   final Set<String> _evaluatingRuleUuids = {};
+  final Map<String, (MarketTicker, DateTime)> _recentTickers = {};
 
   final _triggeredController = StreamController<AlertRule>.broadcast();
   Stream<AlertRule> get onRuleTriggered => _triggeredController.stream;
@@ -65,8 +66,18 @@ class SchedulerService {
     if (exchange == null) return false;
 
     try {
-      // 1. Fetch current price & volume via pure REST
-      final ticker = await exchange.fetchTicker(rule.pair);
+      // 1. Fetch current price & volume via pure REST (with short 2-second in-memory dedup)
+      final cacheKey = '${rule.exchangeId}:${rule.pair.marketSymbol}';
+      MarketTicker ticker;
+      final cached = _recentTickers[cacheKey];
+      if (cached != null && now.difference(cached.$2).inSeconds < 2) {
+        ticker = cached.$1;
+      } else {
+        ticker = await exchange.fetchTicker(rule.pair);
+        if (ticker.lastPrice > 0) {
+          _recentTickers[cacheKey] = (ticker, now);
+        }
+      }
 
       // Never process non-positive or corrupted prices
       if (ticker.lastPrice <= 0) return false;
@@ -86,9 +97,7 @@ class SchedulerService {
 
       if (result.isTriggered) {
         // Dispatch Notification with custom note and custom sound
-        final finalBody = (rule.customNote != null && rule.customNote!.trim().isNotEmpty)
-            ? '${result.message}\n📝 ${rule.customNote!.trim()}'
-            : result.message;
+        final finalBody = result.message;
 
         await _notificationService.showCriticalAlert(
           id: rule.uuid.hashCode,

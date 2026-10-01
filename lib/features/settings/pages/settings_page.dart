@@ -185,7 +185,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         const Icon(Icons.music_note_rounded, size: 22),
                         const SizedBox(width: 8),
                         Text(
-                          isFa ? 'انتخاب آهنگ زنگ و صدای آلارم' : 'Select Alarm Ringtone',
+                          AppStrings.get('select_alarm_sound', lang),
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -212,7 +212,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       final preset = SoundManager.presets[index];
                       final isSelected = currentSoundId == preset.id;
                       final isPlaying = SoundManager().isSoundPlaying(preset.id);
-                      final title = isFa ? preset.titleFa : preset.titleEn;
+                      final title = preset.getTitle(lang);
 
                       return InkWell(
                         onTap: () async {
@@ -286,7 +286,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
-                    child: Text(isFa ? 'تأیید و ذخیره' : 'Save & Confirm', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    child: Text(AppStrings.get('confirm_sound_btn', lang), style: const TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],
@@ -309,8 +309,8 @@ class _SettingsPageState extends State<SettingsPage> {
 
     await notifService.showCriticalAlert(
       id: 99999,
-      title: AppStrings.get('test_alert_title', lang),
-      body: AppStrings.get('test_alert_body', lang),
+      title: '🟢 BTC/USDT +3.52% Live Price ▲',
+      body: '📝 ${AppStrings.get('test_alert_body', lang)}',
       soundName: settingsService.settings.soundName,
       volume: settingsService.settings.alarmVolume,
       soundEnabled: settingsService.settings.soundEnabled,
@@ -427,11 +427,11 @@ class _SettingsPageState extends State<SettingsPage> {
         if (context.mounted) {
           ScaffoldMessenger.of(context).hideCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Format error in JSON backup file.'),
+            SnackBar(
+              content: Text(AppStrings.get('format_error_json', lang)),
               backgroundColor: AppTokens.negative,
               behavior: SnackBarBehavior.floating,
-              duration: Duration(seconds: 3),
+              duration: const Duration(seconds: 3),
             ),
           );
         }
@@ -580,6 +580,22 @@ class _SettingsPageState extends State<SettingsPage> {
                       accent: const Color(0xFFEA580C),
                       onSelect: () => settingsService.setPalette(AppThemePalette.lightOrange),
                     ),
+                    _buildThemeCard(
+                      palette: AppThemePalette.darkPurpleBlue,
+                      currentPalette: settings.themePalette,
+                      title: AppStrings.get('theme_dark_purple_blue', lang),
+                      bgPreview: const Color(0xFF0B0D1B),
+                      accent: const Color(0xFF8B5CF6),
+                      onSelect: () => settingsService.setPalette(AppThemePalette.darkPurpleBlue),
+                    ),
+                    _buildThemeCard(
+                      palette: AppThemePalette.lightPurpleBlue,
+                      currentPalette: settings.themePalette,
+                      title: AppStrings.get('theme_light_purple_blue', lang),
+                      bgPreview: const Color(0xFFF5F6FF),
+                      accent: const Color(0xFF7C3AED),
+                      onSelect: () => settingsService.setPalette(AppThemePalette.lightPurpleBlue),
+                    ),
                   ],
                 ),
               ],
@@ -650,7 +666,7 @@ class _SettingsPageState extends State<SettingsPage> {
                     (p) => p.id == settings.soundName,
                     orElse: () => SoundManager.presets.first,
                   );
-                  final soundTitle = isFa ? currentPreset.titleFa : currentPreset.titleEn;
+                  final soundTitle = currentPreset.getTitle(lang);
                   final isPlaying = SoundManager().isSoundPlaying(currentPreset.id);
 
                   return InkWell(
@@ -672,7 +688,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  isFa ? 'صدای زنگ آلارم انتخابی' : 'Selected Alarm Sound',
+                                  AppStrings.get('selected_sound_label', lang),
                                   style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                                 ),
                                 const SizedBox(height: 2),
@@ -706,7 +722,7 @@ class _SettingsPageState extends State<SettingsPage> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              isFa ? 'تغییر صدا' : 'Change',
+                              AppStrings.get('change_sound_btn', lang),
                               style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
                             ),
                           ),
@@ -726,7 +742,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         Icon(Icons.volume_up_rounded, size: 18, color: theme.colorScheme.primary),
                         const SizedBox(width: 6),
                         Text(
-                          isFa ? 'بلندی صدای آلارم' : 'Alarm Volume',
+                          AppStrings.get('alarm_volume_label', lang),
                           style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                         ),
                       ],

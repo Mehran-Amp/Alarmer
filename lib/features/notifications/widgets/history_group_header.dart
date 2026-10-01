@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
-import '../../../../core/constants/strings.dart';
+import '../../../../core/localization/app_strings.dart';
 import '../../../../core/theme/tokens.dart';
 
 /// Group header for separating notification logs by day (Today, Yesterday, or MMM d, yyyy).
 class HistoryGroupHeader extends StatelessWidget {
   final DateTime date;
+  final String? lang;
 
-  const HistoryGroupHeader({super.key, required this.date});
+  const HistoryGroupHeader({super.key, required this.date, this.lang});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final title = _formatHeader(date);
+    final activeLang = lang ?? 'en';
+    final title = _formatHeader(date, activeLang);
 
     return Container(
       width: double.infinity,
@@ -32,16 +34,16 @@ class HistoryGroupHeader extends StatelessWidget {
     );
   }
 
-  String _formatHeader(DateTime dt) {
+  String _formatHeader(DateTime dt, String activeLang) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
     final checkDate = DateTime(dt.year, dt.month, dt.day);
 
     if (checkDate == today) {
-      return S.dateToday;
+      return AppStrings.get('date_today', activeLang);
     } else if (checkDate == yesterday) {
-      return S.dateYesterday;
+      return AppStrings.get('date_yesterday', activeLang);
     } else {
       const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';

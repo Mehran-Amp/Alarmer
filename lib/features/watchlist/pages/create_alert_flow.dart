@@ -703,7 +703,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                 padding: const EdgeInsets.only(right: 6, bottom: 6),
                 child: FilterChip(
                   selected: isSelected,
-                  label: Text('${cat.icon} ${cat.titleFa}'),
+                  label: Text('${cat.icon} ${cat.getTitle(lang)}'),
                   labelStyle: TextStyle(
                     fontSize: 11,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
@@ -997,6 +997,9 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
           child: Row(
             children: [
               _buildMacroChip(isFa ? '🌐 همه نمادها' : 'All', 'all', theme),
+              _buildMacroChip(isFa ? '🚀 هوافضا، استارلینک و فضا' : 'SpaceX & Space', 'Aerospace', theme),
+              _buildMacroChip(isFa ? '🧠 هوش مصنوعی و Pre-IPO' : 'Pre-IPO & AI', 'PreIPO', theme),
+              _buildMacroChip(isFa ? '⛏️ ماینینگ و فین‌تک' : 'Mining & Fintech', 'FintechMining', theme),
               _buildMacroChip(isFa ? '🪙 شاخص‌های کلان کریپتو و دامیننس' : 'Crypto Macro & Dominance', 'CryptoMacro', theme),
               _buildMacroChip(isFa ? '🇨🇳 بازارهای چین و آسیا' : 'China & Asia', 'China', theme),
               _buildMacroChip(isFa ? '🏆 ۱۰۰ شرکت برتر جهان' : 'Top 100 Global', 'Top100', theme),
@@ -1227,8 +1230,10 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                       const SizedBox(width: 6),
                       Text(
                         _isLoadingPrice
-                            ? 'در حال دریافت قیمت زنده...'
-                            : (_currentPrice != null ? 'قیمت لحظه‌ای بازار:' : 'عدم دسترسی به قیمت زنده'),
+                            ? AppStrings.get('fetching_live_price', lang)
+                            : (_currentPrice != null
+                                ? AppStrings.get('live_market_price', lang)
+                                : AppStrings.get('live_price_unavailable', lang)),
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -1270,7 +1275,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                     TextButton.icon(
                       onPressed: _fetchLivePriceForSelectedAsset,
                       icon: const Icon(Icons.refresh_rounded, size: 14),
-                      label: const Text('تلاش مجدد', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                      label: Text(AppStrings.get('retry_btn', lang), style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         visualDensity: VisualDensity.compact,
@@ -1473,7 +1478,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
 
         // 3. CUSTOM NOTIFICATION, SOUND & NOTE SECTION
         Text(
-          isFa ? 'تنظیمات صدا، ویبره و متن پیام اعلان' : 'Notification, Sound & Note',
+          AppStrings.get('sound_and_vibrate_section', lang),
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
         ),
         const SizedBox(height: 8),
@@ -1493,8 +1498,8 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                 controller: _customNoteController,
                 style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurface),
                 decoration: InputDecoration(
-                  labelText: isFa ? 'متن / یادداشت اختصاصی هنگام آلارم' : 'Custom Alert Note / Message',
-                  hintText: isFa ? 'مثلاً: تارگت ۱ رسید - ۵۰٪ سیو سود کن!' : 'e.g. Target 1 reached - Take profit!',
+                  labelText: AppStrings.get('custom_note_title', lang),
+                  hintText: AppStrings.get('custom_note_hint', lang),
                   prefixIcon: Icon(Icons.edit_note_rounded, size: 22, color: theme.colorScheme.primary),
                   filled: true,
                   fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
@@ -1509,7 +1514,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                   (p) => p.id == _selectedSound,
                   orElse: () => SoundManager.presets.first,
                 );
-                final soundTitle = isFa ? currentPreset.titleFa : currentPreset.titleEn;
+                final soundTitle = currentPreset.getTitle(lang);
                 final isPlaying = SoundManager().isSoundPlaying(currentPreset.id);
 
                 return InkWell(
@@ -1531,7 +1536,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                isFa ? 'آهنگ زنگ این آلارم' : 'Alert Sound',
+                                AppStrings.get('alarm_sound_title', lang),
                                 style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
                               ),
                               Text(
@@ -1563,7 +1568,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
-                            isFa ? 'انتخاب' : 'Choose',
+                            AppStrings.get('change_sound_btn', lang),
                             style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
                           ),
                         ),
@@ -1582,7 +1587,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                       dense: true,
                       contentPadding: EdgeInsets.zero,
                       title: Text(
-                        isFa ? 'پخش صدا' : 'Play Sound',
+                        AppStrings.get('play_sound_label', lang),
                         style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                       ),
                       value: _soundEnabled,
@@ -1595,7 +1600,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                       dense: true,
                       contentPadding: EdgeInsets.zero,
                       title: Text(
-                        isFa ? 'ویبره گوشی' : 'Vibrate',
+                        AppStrings.get('vibrate_phone_label', lang),
                         style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
                       ),
                       value: _vibrationEnabled,
@@ -1658,7 +1663,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                         const Icon(Icons.music_note_rounded, size: 22),
                         const SizedBox(width: 8),
                         Text(
-                          isFa ? 'انتخاب آهنگ زنگ آلارم' : 'Select Alert Sound',
+                          AppStrings.get('select_alarm_sound', lang),
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -1685,7 +1690,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                       final preset = SoundManager.presets[index];
                       final isSelected = _selectedSound == preset.id;
                       final isPlaying = SoundManager().isSoundPlaying(preset.id);
-                      final title = isFa ? preset.titleFa : preset.titleEn;
+                      final title = preset.getTitle(lang);
 
                       return InkWell(
                         onTap: () async {
@@ -1759,7 +1764,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
-                    child: Text(isFa ? 'تأیید و ذخیره صدا' : 'Confirm Sound', style: const TextStyle(fontWeight: FontWeight.bold)),
+                    child: Text(AppStrings.get('confirm_sound_btn', lang), style: const TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ),
               ],

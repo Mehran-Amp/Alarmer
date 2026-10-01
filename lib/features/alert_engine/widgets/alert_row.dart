@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../../../core/constants/strings.dart';
+import '../../../../core/localization/app_strings.dart';
 import '../../../../core/theme/tokens.dart';
+import '../../settings/services/settings_service.dart';
 import '../models/alert_rule.dart';
 import '../models/alert_type.dart';
 import 'cooldown_timer.dart';
@@ -30,7 +33,8 @@ class AlertRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final conditionDescription = _buildConditionDescription(rule);
+    final lang = context.watch<SettingsService>().settings.language;
+    final conditionDescription = _buildConditionDescription(rule, lang);
 
     return Dismissible(
       key: Key(rule.uuid),
@@ -50,7 +54,7 @@ class AlertRow extends StatelessWidget {
       ),
       onDismissed: (_) => onSwipeDelete(),
       child: GestureDetector(
-        onLongPressStart: (details) => _showContextMenu(context, details.globalPosition),
+        onLongPressStart: (details) => _showContextMenu(context, details.globalPosition, lang),
         child: Container(
           margin: const EdgeInsets.symmetric(
             horizontal: AppTokens.space16,
@@ -167,7 +171,7 @@ class AlertRow extends StatelessWidget {
               Row(
                 children: [
                   Text(
-                    'Triggers: ${rule.triggerCount}',
+                    '${AppStrings.get('triggers_count', lang)} ${rule.triggerCount}',
                     style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
                   ),
                   if (rule.lastTriggeredAt != null) ...[
@@ -175,7 +179,7 @@ class AlertRow extends StatelessWidget {
                     Text('·', style: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.5))),
                     const SizedBox(width: AppTokens.space8),
                     Text(
-                      'Last: ${_formatTime(rule.lastTriggeredAt!)}',
+                      '${AppStrings.get('last_trigger', lang)} ${_formatTime(rule.lastTriggeredAt!)}',
                       style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
                     ),
                   ],
@@ -205,7 +209,7 @@ class AlertRow extends StatelessWidget {
     );
   }
 
-  void _showContextMenu(BuildContext context, Offset position) {
+  void _showContextMenu(BuildContext context, Offset position, String lang) {
     final theme = Theme.of(context);
     showMenu<String>(
       context: context,
@@ -227,7 +231,7 @@ class AlertRow extends StatelessWidget {
             children: [
               Icon(Icons.copy_rounded, size: 18, color: theme.colorScheme.primary),
               const SizedBox(width: AppTokens.space12),
-              Text(S.duplicateAlert, style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 13)),
+              Text(AppStrings.get('duplicate_action', lang), style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 13)),
             ],
           ),
         ),
@@ -237,7 +241,7 @@ class AlertRow extends StatelessWidget {
             children: [
               Icon(Icons.edit_rounded, size: 18, color: theme.colorScheme.primary),
               const SizedBox(width: AppTokens.space12),
-              Text(S.editAlert, style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 13)),
+              Text(AppStrings.get('edit_action', lang), style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 13)),
             ],
           ),
         ),
@@ -247,7 +251,7 @@ class AlertRow extends StatelessWidget {
             children: [
               Icon(Icons.ios_share_rounded, size: 18, color: theme.colorScheme.primary),
               const SizedBox(width: AppTokens.space12),
-              Text(S.exportAlert, style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 13)),
+              Text(AppStrings.get('export_rule_action', lang), style: TextStyle(color: theme.colorScheme.onSurface, fontSize: 13)),
             ],
           ),
         ),
@@ -259,12 +263,23 @@ class AlertRow extends StatelessWidget {
     });
   }
 
-  String _buildConditionDescription(AlertRule rule) {
+  String _buildConditionDescription(AlertRule rule, String lang) {
     final target = (rule.targetValue ?? 0.0).toStringAsFixed(2);
+    final isAbove = rule.condition == ConditionType.above;
+
     switch (rule.alertType) {
       case AlertType.price:
       case AlertType.priceCross:
-        final dir = rule.condition == ConditionType.above ? 'ABOVE' : 'BELOW';
+        if (lang == 'fa') {
+          return 'عبور قیمت ${isAbove ? 'به بالاتر از' : 'به پایین‌تر از'} \$$target';
+        } else if (lang == 'ckb') {
+          return 'تێپەڕینی نرخ بۆ ${isAbove ? 'سەرەوەی' : 'خوارەوەی'} \$$target';
+        } else if (lang == 'ar') {
+          return 'تجاوز السعر ${isAbove ? 'أعلى من' : 'أدنى من'} \$$target';
+        } else if (lang == 'tr') {
+          return 'Fiyat \$$target ${isAbove ? 'üzerine çıkışı' : 'altına düşüşü'}';
+        }
+        final dir = isAbove ? 'ABOVE' : 'BELOW';
         return 'Price crosses $dir \$$target';
       case AlertType.percent:
       case AlertType.percentChange:
@@ -273,6 +288,13 @@ class AlertRow extends StatelessWidget {
         final windowLabel = secs >= 3600
             ? '${secs ~/ 3600}h'
             : (secs >= 60 ? '${secs ~/ 60}m' : '${secs}s');
+        if (lang == 'fa') {
+          return 'نوسان قیمت $dir${rule.targetValue ?? 0}% در $windowLabel';
+        } else if (lang == 'ckb') {
+          return 'گۆڕانی نرخ $dir${rule.targetValue ?? 0}% لە $windowLabel';
+        } else if (lang == 'ar') {
+          return 'تغير السعر $dir${rule.targetValue ?? 0}% خلال $windowLabel';
+        }
         return 'Price moves $dir${rule.targetValue ?? 0}% in $windowLabel';
       case AlertType.absolute:
         return 'Price delta >= \$$target';

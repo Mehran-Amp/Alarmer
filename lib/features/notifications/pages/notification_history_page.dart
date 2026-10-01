@@ -151,8 +151,8 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                HistoryGroupHeader(date: group.date),
-                                ...group.logs.map((log) => _buildLogCard(log, theme)),
+                                HistoryGroupHeader(date: group.date, lang: lang),
+                                ...group.logs.map((log) => _buildLogCard(log, theme, lang)),
                               ],
                             );
                           },
@@ -184,7 +184,7 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
     );
   }
 
-  Widget _buildLogCard(NotificationLog log, ThemeData theme) {
+  Widget _buildLogCard(NotificationLog log, ThemeData theme, String lang) {
     final isWarning = log.message.contains('cooldown') || log.message.contains('Suppressed');
     final isUpward = log.title.contains('🟢') ||
         log.title.contains('صعود') ||
@@ -299,7 +299,7 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
           Row(
             children: [
               Text(
-                'قیمت فعال‌سازی: ',
+                '${AppStrings.get('trigger_price_label', lang)} ',
                 style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.55)),
               ),
               Text(

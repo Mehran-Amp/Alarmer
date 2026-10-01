@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/localization/app_strings.dart';
+import '../../core/utils/app_lifecycle_helper.dart';
 import '../../features/notifications/pages/notification_history_page.dart';
 import '../../features/settings/pages/settings_page.dart';
 import '../../features/settings/services/settings_service.dart';
@@ -33,13 +34,21 @@ class _AppShellState extends State<AppShell> {
     final theme = Theme.of(context);
     final unselectedColor = theme.colorScheme.onSurface.withValues(alpha: 0.55);
 
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _pages,
-      ),
-      bottomNavigationBar: Container(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        // Pressing Back anywhere in the app moves app to background (mimicking home button)
+        // so the app continues running permanently in the background.
+        await AppLifecycleHelper.moveToBackground();
+      },
+      child: Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        body: IndexedStack(
+          index: _currentIndex,
+          children: _pages,
+        ),
+        bottomNavigationBar: Container(
         height: 72,
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
@@ -88,8 +97,9 @@ class _AppShellState extends State<AppShell> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildNavItem({
     required int index,

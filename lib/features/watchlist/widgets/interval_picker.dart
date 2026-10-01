@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../../../core/localization/app_strings.dart';
 import '../../../../core/theme/tokens.dart';
+import '../../settings/services/settings_service.dart';
 
 enum PollingUnit { seconds, minutes, hours }
 
@@ -65,6 +68,8 @@ class _IntervalPickerState extends State<IntervalPicker> {
 
   @override
   Widget build(BuildContext context) {
+    final lang = context.watch<SettingsService>().settings.language;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -72,7 +77,7 @@ class _IntervalPickerState extends State<IntervalPicker> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Check Frequency (دوره بررسی قیمت)',
+              AppStrings.get('frequency', lang),
               style: AppTokens.caption.copyWith(color: AppTokens.textSecondary, fontWeight: FontWeight.w600),
             ),
             Text(
@@ -93,11 +98,11 @@ class _IntervalPickerState extends State<IntervalPicker> {
                 keyboardType: TextInputType.number,
                 onChanged: (_) => _notifyChange(),
                 style: AppTokens.monoNumbers,
-                decoration: const InputDecoration(
-                  labelText: 'Interval',
+                decoration: InputDecoration(
+                  labelText: AppStrings.get('frequency', lang),
                   filled: true,
                   fillColor: AppTokens.surface,
-                  border: OutlineInputBorder(borderRadius: AppTokens.borderMedium),
+                  border: const OutlineInputBorder(borderRadius: AppTokens.borderMedium),
                 ),
               ),
             ),
@@ -105,10 +110,10 @@ class _IntervalPickerState extends State<IntervalPicker> {
             Expanded(
               flex: 6,
               child: SegmentedButton<PollingUnit>(
-                segments: const [
-                  ButtonSegment(value: PollingUnit.seconds, label: Text('Sec (ثانیه)')),
-                  ButtonSegment(value: PollingUnit.minutes, label: Text('Min (دقیقه)')),
-                  ButtonSegment(value: PollingUnit.hours, label: Text('Hour (ساعت)')),
+                segments: [
+                  ButtonSegment(value: PollingUnit.seconds, label: Text(AppStrings.get('seconds', lang))),
+                  ButtonSegment(value: PollingUnit.minutes, label: Text(AppStrings.get('minutes', lang))),
+                  ButtonSegment(value: PollingUnit.hours, label: Text(AppStrings.get('hours', lang))),
                 ],
                 selected: {_unit},
                 onSelectionChanged: (selected) {

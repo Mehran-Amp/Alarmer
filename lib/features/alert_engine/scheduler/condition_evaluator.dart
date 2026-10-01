@@ -54,6 +54,17 @@ abstract class ConditionEvaluator {
     }
   }
 
+  static String _buildBodyText(AlertRule rule, double currentPrice) {
+    final customNote = rule.customNote?.trim();
+    if (customNote != null && customNote.isNotEmpty) {
+      if (customNote.startsWith('📝')) {
+        return customNote;
+      }
+      return '📝 $customNote';
+    }
+    return '📝 Live Price: \$${_formatVal(currentPrice)}';
+  }
+
   /// 1. Price Threshold (One-shot):
   static EvaluationResult _evaluatePriceThreshold(
     AlertRule rule,
@@ -63,27 +74,46 @@ abstract class ConditionEvaluator {
     if (target <= 0.0) return EvaluationResult.notTriggered;
 
     bool triggered = false;
-    final isUpward = rule.direction == AlertDirection.above ||
-        (rule.direction == AlertDirection.bothSides && currentPrice >= target);
-
     if (rule.direction == AlertDirection.above) {
       triggered = currentPrice >= target;
     } else if (rule.direction == AlertDirection.below) {
       triggered = currentPrice <= target;
     } else {
-      triggered = currentPrice >= target || currentPrice <= target;
+      triggered = (rule.basePrice != null && rule.basePrice! < target && currentPrice >= target) ||
+          (rule.basePrice != null && rule.basePrice! > target && currentPrice <= target) ||
+          (currentPrice == target);
+      if (!triggered && rule.basePrice == null) {
+        triggered = currentPrice >= target;
+      }
     }
 
     if (!triggered) return EvaluationResult.notTriggered;
 
+    double percentDiff = 0.0;
+    if (rule.basePrice != null && rule.basePrice! > 0) {
+      percentDiff = ((currentPrice - rule.basePrice!) / rule.basePrice!) * 100.0;
+    } else if (target > 0) {
+      percentDiff = ((currentPrice - target) / target) * 100.0;
+    }
+
+    final bool isUpward;
+    if (rule.direction == AlertDirection.above) {
+      isUpward = true;
+    } else if (rule.direction == AlertDirection.below) {
+      isUpward = false;
+    } else {
+      isUpward = percentDiff >= 0;
+    }
+
     final emoji = isUpward ? '🟢' : '🔴';
-    final arrow = isUpward ? '↗️' : '↘️';
-    final actionText = isUpward ? 'عبور به بالای هدف' : 'افت به زیر هدف';
+    final arrow = isUpward ? '▲' : '▼';
+    final sign = isUpward ? '+' : '-';
+    final pctStr = '$sign${percentDiff.abs().toStringAsFixed(2)}%';
 
     return EvaluationResult(
       isTriggered: true,
-      title: '$emoji 🎯 ${rule.pair.displayName} $actionText $arrow',
-      message: '💰 قیمت زنده: \$${_formatVal(currentPrice)} $emoji\n🎯 تارگت تعیین‌شده: \$${_formatVal(target)} · صرافی ${rule.exchangeId.toUpperCase()}',
+      title: '$emoji ${rule.pair.displayName} $pctStr Live Price $arrow',
+      message: _buildBodyText(rule, currentPrice),
       newIsActive: false,     // One-shot: deactivates
       newIsTriggered: true,   // Marked as triggered in UI
       newBasePrice: currentPrice,
@@ -115,14 +145,14 @@ abstract class ConditionEvaluator {
 
     final isUpward = actualPercent >= 0;
     final emoji = isUpward ? '🟢' : '🔴';
-    final arrow = isUpward ? '▲ ↗️' : '▼ ↘️';
-    final sign = isUpward ? '+' : '';
-    final actionText = isUpward ? 'صعود شارپ' : 'ریزش قیمت';
+    final arrow = isUpward ? '▲' : '▼';
+    final sign = isUpward ? '+' : '-';
+    final pctStr = '$sign${actualPercent.abs().toStringAsFixed(2)}%';
 
     return EvaluationResult(
       isTriggered: true,
-      title: '$emoji 📈 ${rule.pair.displayName} $actionText $sign${actualPercent.toStringAsFixed(2)}% $arrow',
-      message: '📊 نوسان ثبت‌شده: $emoji $sign${actualPercent.toStringAsFixed(2)}% (هدف: ±$targetPercent%)\n💰 قیمت فعلی: \$${_formatVal(currentPrice)} (مبنا: \$${_formatVal(base)})',
+      title: '$emoji ${rule.pair.displayName} $pctStr Live Price $arrow',
+      message: _buildBodyText(rule, currentPrice),
       newBasePrice: currentPrice, // Update baseline for next cycle to latest price!
       newIsActive: true,          // Stays active forever until paused
       newIsTriggered: false,
@@ -152,14 +182,16 @@ abstract class ConditionEvaluator {
     if (!triggered) return EvaluationResult.notTriggered;
 
     final isUpward = diff >= 0;
+    final actualPercent = base > 0 ? (diff / base) * 100.0 : 0.0;
     final emoji = isUpward ? '🟢' : '🔴';
-    final arrow = isUpward ? '▲ ↗️' : '▼ ↘️';
+    final arrow = isUpward ? '▲' : '▼';
     final sign = isUpward ? '+' : '-';
+    final pctStr = '$sign${actualPercent.abs().toStringAsFixed(2)}%';
 
     return EvaluationResult(
       isTriggered: true,
-      title: '$emoji ${rule.pair.displayName} تغییر دلاری $sign\$${_formatVal(diff.abs())} $arrow',
-      message: '💵 تغییرات دلاری: $emoji $sign\$${_formatVal(diff.abs())}\n💰 قیمت لحظه‌ای: \$${_formatVal(currentPrice)}',
+      title: '$emoji ${rule.pair.displayName} $pctStr Live Price $arrow',
+      message: _buildBodyText(rule, currentPrice),
       newBasePrice: currentPrice,
       newIsActive: true,
       newIsTriggered: false,
@@ -181,10 +213,16 @@ abstract class ConditionEvaluator {
     final actualPercent = (diff / baseVolume) * 100.0;
 
     if (actualPercent >= volumePercent) {
+      final isUpward = actualPercent >= 0;
+      final emoji = isUpward ? '🟢' : '🔴';
+      final arrow = isUpward ? '▲' : '▼';
+      final sign = isUpward ? '+' : '-';
+      final pctStr = '$sign${actualPercent.abs().toStringAsFixed(2)}%';
+
       return EvaluationResult(
         isTriggered: true,
-        title: '📊 ⚡ ${rule.pair.displayName} جهش حجم معاملات +${actualPercent.toStringAsFixed(1)}%',
-        message: '🚀 حجم ۲۴ ساعته بازار با رشد +${actualPercent.toStringAsFixed(1)}% به \$${_formatVal(currentVolume)} رسید.',
+        title: '$emoji ${rule.pair.displayName} $pctStr Live Price $arrow',
+        message: _buildBodyText(rule, rule.lastCheckedPrice ?? 0.0),
         newBaseVolume: currentVolume,
         newIsActive: true,
         newIsTriggered: false,
