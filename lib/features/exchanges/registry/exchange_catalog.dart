@@ -9,18 +9,22 @@ import '../bitbarg/bitbarg_exchange.dart';
 import '../bitget/bitget_exchange.dart';
 import '../bybit/bybit_exchange.dart';
 import '../coinbase/coinbase_exchange.dart';
-import '../coinex/coinex_exchange.dart';
 import '../coingecko/coingecko_exchange.dart';
 import '../coinmarketcap/coinmarketcap_exchange.dart';
 import '../gateio/gateio_exchange.dart';
+import '../kcex/kcex_exchange.dart';
 import '../kraken/kraken_exchange.dart';
 import '../kucoin/kucoin_exchange.dart';
+import '../lbank/lbank_exchange.dart';
 import '../mexc/mexc_exchange.dart';
 import '../nobitex/nobitex_exchange.dart';
 import '../okx/okx_exchange.dart';
+import '../ourbit/ourbit_exchange.dart';
 import '../stocks/global_stocks_exchange.dart';
 import '../tabdeal/tabdeal_exchange.dart';
+import '../toobit/toobit_exchange.dart';
 import '../wallex/wallex_exchange.dart';
+import '../xt/xt_exchange.dart';
 
 /// Exhaustive Catalog of all verified exchanges from BitcoinChecker MarketsConfig & Iranian Domestic Markets.
 /// Provides unrestricted access to all spot assets on each exchange with 100% price uptime.
@@ -60,7 +64,6 @@ class ExchangeCatalog {
         name: 'Exir (اکسیر)',
         defaultCounterCurrency: 'TMN',
       ),
-      CoinExExchange(),
 
       // --- TIER 1 GLOBAL CRYPTO EXCHANGES (Full Catalog & Live API) ---
       BinanceExchange(),
@@ -69,12 +72,17 @@ class ExchangeCatalog {
       BybitExchange(),
       MEXCExchange(),
       GateioExchange(),
+      KCEXExchange(),
+      LBankExchange(),
+      OurbitExchange(),
+      XTExchange(),
+      ToobitExchange(),
       BingXExchange(),
       BitgetExchange(),
       CoinbaseExchange(),
       KrakenExchange(),
 
-      // --- EXTENDED MAJOR INTERNATIONAL EXCHANGES (From BitcoinChecker MarketsConfig) ---
+      // --- EXTENDED MAJOR INTERNATIONAL EXCHANGES ---
       StandardRestExchange(
         id: 'htx',
         name: 'HTX / Huobi',

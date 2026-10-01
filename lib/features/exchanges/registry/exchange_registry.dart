@@ -78,6 +78,7 @@ class ExchangeRegistry {
     final results = <String, List<CurrencyPair>>{};
 
     for (final exchange in _exchanges.values) {
+      if (exchange.id == 'global_stocks') continue;
       try {
         final pairs = await getCurrencyPairs(exchange.id);
         final matched = pairs.where((p) {
@@ -106,6 +107,7 @@ class ExchangeRegistry {
     final available = <Exchange>[];
 
     for (final exchange in _exchanges.values) {
+      if (exchange.id == 'global_stocks') continue;
       try {
         final pairs = await getCurrencyPairs(exchange.id);
         final exists = pairs.any(

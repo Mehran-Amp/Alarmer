@@ -21,7 +21,7 @@ class GlobalStocksExchange implements Exchange {
   String get name => 'بازارهای جهانی و سهام (NASDAQ / NYSE / Commodities)';
 
   @override
-  ExchangeCategory get category => ExchangeCategory.stocks;
+  ExchangeCategory get category => ExchangeCategory.all;
 
   @override
   String get countryBadge => '🏛️ Global Equities & Commodities';
