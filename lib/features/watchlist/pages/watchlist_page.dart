@@ -27,9 +27,19 @@ class _WatchlistPageState extends State<WatchlistPage> {
   final Set<String> _checkingRuleUuids = {};
   AlertRule? _recentlyDeletedRule;
   Timer? _undoToastTimer;
+  Timer? _countdownTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
 
   @override
   void dispose() {
+    _countdownTimer?.cancel();
     _undoToastTimer?.cancel();
     super.dispose();
   }
@@ -495,7 +505,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
 
                 const SizedBox(height: 8),
 
-                // Row 3: Interval Tag + Baseline + Last Checked + Quick Check Now Button
+                // Row 3: Interval Tag + Baseline + Remaining Time to Next Check + Quick Check Now Button
                 Row(
                   children: [
                     Container(
@@ -524,13 +534,33 @@ class _WatchlistPageState extends State<WatchlistPage> {
                         style: TextStyle(fontSize: 10, color: textMuted),
                       ),
                     ],
-                    const Spacer(),
-                    if (rule.lastCheckedAt != null)
-                      Text(
-                        _formatTimeAgo(rule.lastCheckedAt!, lang),
-                        style: TextStyle(fontSize: 10, color: textMuted),
-                      ),
                     const SizedBox(width: 8),
+                    // Remaining Time until Next Scheduled Check
+                    Expanded(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.hourglass_bottom_rounded,
+                            size: 11,
+                            color: rule.isActive ? theme.colorScheme.primary : textMuted,
+                          ),
+                          const SizedBox(width: 3),
+                          Flexible(
+                            child: Text(
+                              _formatNextCheckTime(rule, lang),
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: rule.isActive ? theme.colorScheme.primary : textMuted,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
                     InkWell(
                       onTap: isChecking ? null : () => _manualCheck(rule, scheduler, lang),
                       borderRadius: BorderRadius.circular(6),
@@ -645,6 +675,40 @@ class _WatchlistPageState extends State<WatchlistPage> {
       return '\$${price.toStringAsFixed(4)}';
     } else {
       return '\$${price.toStringAsFixed(8)}';
+    }
+  }
+
+  String _formatNextCheckTime(AlertRule rule, String lang) {
+    final isFa = AppStrings.isRtl(lang);
+    if (!rule.isActive) {
+      return isFa ? 'غیرفعال' : 'Inactive';
+    }
+
+    final now = DateTime.now();
+    final lastTime = rule.lastCheckedAt ?? rule.createdAt;
+    final nextTime = lastTime.add(Duration(seconds: rule.checkIntervalSeconds));
+    final diff = nextTime.difference(now);
+
+    if (diff.isNegative || diff.inSeconds <= 0) {
+      return isFa ? 'در حال بررسی...' : 'Checking now...';
+    }
+
+    if (diff.inHours >= 1) {
+      final h = diff.inHours;
+      final m = diff.inMinutes % 60;
+      if (m == 0) {
+        return isFa ? '$h ساعت تا بررسی' : 'In ${h}h';
+      }
+      return isFa ? '$h ساعت و $m دقیقه تا بررسی' : 'In ${h}h ${m}m';
+    } else if (diff.inMinutes >= 1) {
+      final m = diff.inMinutes;
+      final s = diff.inSeconds % 60;
+      if (s == 0) {
+        return isFa ? '$m دقیقه تا بررسی' : 'In ${m}m';
+      }
+      return isFa ? '$m دقیقه و $s ثانیه تا بررسی' : 'In ${m}m ${s}s';
+    } else {
+      return isFa ? '${diff.inSeconds} ثانیه تا بررسی' : 'In ${diff.inSeconds}s';
     }
   }
 

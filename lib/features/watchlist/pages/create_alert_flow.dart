@@ -214,30 +214,72 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
     }
   }
 
-  Future<void> _onPairChosen(CurrencyPair pair) async {
+  String _formatSmartPrice(double price, String quoteCurrency) {
+    final isToman = quoteCurrency == 'TMN' || quoteCurrency == 'IRT';
+    final isRials = quoteCurrency == 'IRR';
+    final numStr = _formatSmartNumber(price);
+    if (isToman) {
+      return '$numStr تومان';
+    } else if (isRials) {
+      return '$numStr ریال';
+    } else if (quoteCurrency == 'EUR') {
+      return '€$numStr';
+    } else if (quoteCurrency == 'GBP') {
+      return '£$numStr';
+    } else if (quoteCurrency == 'BTC') {
+      return '₿${price.toStringAsFixed(8)}';
+    } else {
+      return '\$$numStr';
+    }
+  }
+
+  static String _formatSmartNumber(double price) {
+    if (price >= 1000) {
+      return price.toStringAsFixed(2);
+    } else if (price >= 1) {
+      return price.toStringAsFixed(4);
+    } else if (price >= 0.0001) {
+      return price.toStringAsFixed(6);
+    } else {
+      return price.toStringAsFixed(8);
+    }
+  }
+
+  Future<void> _fetchLivePriceForSelectedAsset() async {
+    if (_selectedPair == null || _selectedExchange == null) return;
     setState(() {
-      _selectedPair = pair;
-      _step = 3;
       _isLoadingPrice = true;
     });
 
     try {
       final snapshot = await widget.registry.fetchSnapshotFrom(
         _selectedExchange!.id,
-        pair,
+        _selectedPair!,
       );
-      if (snapshot != null && mounted) {
+      if (snapshot != null && snapshot.price > 0 && mounted) {
         setState(() {
           _currentPrice = snapshot.price;
-          _targetPriceController.text = snapshot.price.toStringAsFixed(2);
+          _targetPriceController.text = _formatSmartNumber(snapshot.price);
           _isLoadingPrice = false;
         });
+        return;
       }
-    } catch (_) {
-      if (mounted) {
-        setState(() => _isLoadingPrice = false);
-      }
+    } catch (_) {}
+
+    if (mounted) {
+      setState(() => _isLoadingPrice = false);
     }
+  }
+
+  Future<void> _onPairChosen(CurrencyPair pair) async {
+    setState(() {
+      _selectedPair = pair;
+      _step = 3;
+      _isLoadingPrice = true;
+      _currentPrice = null;
+    });
+
+    await _fetchLivePriceForSelectedAsset();
   }
 
   Future<void> _onMacroAssetChosen(Map<String, dynamic> asset) async {
@@ -711,9 +753,13 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
     final filtered = _exchangePairs.where((p) {
       final q = _pairSearchQuery.trim().toUpperCase();
       if (q.isEmpty) return true;
+      final assetName = CryptoIcons.getName(p.baseCurrency).toUpperCase();
+      final aliases = CryptoIcons.getAliases(p.baseCurrency).toUpperCase();
       return p.baseCurrency.toUpperCase().contains(q) ||
           p.counterCurrency.toUpperCase().contains(q) ||
-          p.marketSymbol.toUpperCase().contains(q);
+          p.marketSymbol.toUpperCase().contains(q) ||
+          assetName.contains(q) ||
+          aliases.contains(q);
     }).toList();
 
     return Column(
@@ -822,11 +868,12 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                       separatorBuilder: (_, __) => const SizedBox(height: 8),
                       itemBuilder: (context, index) {
                         final pair = filtered[index];
+                        final fullName = CryptoIcons.getName(pair.baseCurrency);
                         return InkWell(
                           onTap: () => _onPairChosen(pair),
                           borderRadius: BorderRadius.circular(14),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                             decoration: BoxDecoration(
                               color: theme.colorScheme.surface,
                               borderRadius: BorderRadius.circular(14),
@@ -834,17 +881,36 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                             ),
                             child: Row(
                               children: [
-                                CryptoIcons.buildLogo(pair.baseCurrency, size: 32),
+                                CryptoIcons.buildLogo(pair.baseCurrency, size: 36),
                                 const SizedBox(width: 12),
                                 Expanded(
-                                  child: Text(
-                                    pair.displayName,
-                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        pair.displayName,
+                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        fullName,
+                                        style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.55)),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                Text(
-                                  AppStrings.get('select_cta', lang),
-                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    AppStrings.get('select_cta', lang),
+                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+                                  ),
                                 ),
                               ],
                             ),
@@ -1022,45 +1088,159 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
       }
     }
 
+    final quoteCurrency = _flowType == MarketFlowType.crypto
+        ? (_selectedPair?.counterCurrency ?? 'USDT')
+        : 'USD';
+
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
+        // Premium Selected Asset & Live Price Card
         Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: theme.colorScheme.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: theme.dividerColor),
-          ),
-          child: Row(
-            children: [
-              Icon(Icons.check_circle_rounded, color: theme.colorScheme.primary, size: 22),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      AppStrings.get('selected_asset', lang),
-                      style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.55)),
-                    ),
-                    Text(
-                      assetName,
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
-                    ),
-                  ],
-                ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.35), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: theme.colorScheme.primary.withValues(alpha: 0.06),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
               ),
-              if (_currentPrice != null)
-                Text(
-                  '\$${_currentPrice!.toStringAsFixed(2)}',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    fontFamily: 'monospace',
-                    color: theme.colorScheme.primary,
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  if (_flowType == MarketFlowType.crypto && _selectedPair != null)
+                    CryptoIcons.buildLogo(_selectedPair!.baseCurrency, size: 42)
+                  else
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.secondary.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      alignment: Alignment.center,
+                      child: Icon(Icons.show_chart_rounded, color: theme.colorScheme.secondary, size: 24),
+                    ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              assetName,
+                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                            ),
+                            const SizedBox(width: 8),
+                            if (_selectedExchange != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  _selectedExchange!.name,
+                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _flowType == MarketFlowType.crypto && _selectedPair != null
+                              ? CryptoIcons.getName(_selectedPair!.baseCurrency)
+                              : AppStrings.get('selected_asset', lang),
+                          style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.55)),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Divider(height: 1, color: theme.dividerColor),
+              const SizedBox(height: 12),
+
+              // Live Current Price Row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: _isLoadingPrice
+                              ? Colors.amber
+                              : (_currentPrice != null ? const Color(0xFF00E676) : Colors.red),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        _isLoadingPrice
+                            ? 'در حال دریافت قیمت زنده...'
+                            : (_currentPrice != null ? 'قیمت لحظه‌ای بازار:' : 'عدم دسترسی به قیمت زنده'),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_isLoadingPrice)
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.primary),
+                    )
+                  else if (_currentPrice != null)
+                    Row(
+                      children: [
+                        Text(
+                          _formatSmartPrice(_currentPrice!, quoteCurrency),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                            fontFamily: 'monospace',
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        InkWell(
+                          onTap: _fetchLivePriceForSelectedAsset,
+                          borderRadius: BorderRadius.circular(16),
+                          child: Padding(
+                            padding: const EdgeInsets.all(4),
+                            child: Icon(Icons.refresh_rounded, size: 18, color: theme.colorScheme.primary),
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    TextButton.icon(
+                      onPressed: _fetchLivePriceForSelectedAsset,
+                      icon: const Icon(Icons.refresh_rounded, size: 14),
+                      label: const Text('تلاش مجدد', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    ),
+                ],
+              ),
             ],
           ),
         ),
