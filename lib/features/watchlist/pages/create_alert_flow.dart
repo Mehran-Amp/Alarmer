@@ -14,6 +14,7 @@ import '../../exchanges/registry/exchange_registry.dart';
 import '../../exchanges/stocks/global_stocks_exchange.dart';
 import '../../settings/services/settings_service.dart';
 import '../../settings/services/sound_manager.dart';
+import '../../../../core/services/tts_service.dart';
 
 enum CheckUnit { seconds, minutes, hours }
 
@@ -92,6 +93,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
   late final TextEditingController _customNoteController;
   String _selectedSound = 'alarm_siren';
   bool _soundEnabled = true;
+  bool _ttsEnabled = false;
   bool _vibrationEnabled = true;
 
   @override
@@ -105,6 +107,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
       _currentPrice = rule.currentDisplayPrice;
       _selectedSound = rule.customSound ?? 'alarm_siren';
       _soundEnabled = rule.soundEnabled;
+      _ttsEnabled = rule.ttsEnabled;
       _vibrationEnabled = rule.vibrationEnabled;
       _customNoteController = TextEditingController(text: rule.customNote ?? '');
 
@@ -385,6 +388,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
         customNote: customNote,
         customSound: _selectedSound,
         soundEnabled: _soundEnabled,
+        ttsEnabled: _ttsEnabled,
         vibrationEnabled: _vibrationEnabled,
         basePrice: _currentPrice ?? widget.initialRule!.basePrice,
         lastCheckedPrice: _currentPrice ?? widget.initialRule!.lastCheckedPrice,
@@ -402,6 +406,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
         customNote: customNote,
         customSound: _selectedSound,
         soundEnabled: _soundEnabled,
+        ttsEnabled: _ttsEnabled,
         vibrationEnabled: _vibrationEnabled,
         currentPrice: _currentPrice,
       );
@@ -1609,6 +1614,73 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                     ),
                   ),
                 ],
+              ),
+
+              const SizedBox(height: 10),
+
+              // 3.4 Text-to-Speech (TTS) Voice Announcer
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: theme.scaffoldBackgroundColor.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _ttsEnabled
+                        ? theme.colorScheme.primary.withValues(alpha: 0.4)
+                        : theme.colorScheme.onSurface.withValues(alpha: 0.08),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    SwitchListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      secondary: Icon(
+                        Icons.record_voice_over_rounded,
+                        color: _ttsEnabled ? theme.colorScheme.primary : theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                        size: 22,
+                      ),
+                      title: Text(
+                        AppStrings.get('tts_voice_title', lang),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                      subtitle: Text(
+                        AppStrings.get('tts_voice_desc', lang),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                        ),
+                      ),
+                      value: _ttsEnabled,
+                      activeColor: theme.colorScheme.primary,
+                      onChanged: (val) => setState(() => _ttsEnabled = val),
+                    ),
+                    if (_ttsEnabled) ...[
+                      const SizedBox(height: 6),
+                      Align(
+                        alignment: (lang == 'fa' || lang == 'ar' || lang == 'ckb')
+                            ? Alignment.centerLeft
+                            : Alignment.centerRight,
+                        child: OutlinedButton.icon(
+                          onPressed: () => TtsService.instance.testVoice(lang),
+                          icon: const Icon(Icons.volume_up_rounded, size: 14),
+                          label: Text(
+                            AppStrings.get('tts_test_button', lang),
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ],
           ),

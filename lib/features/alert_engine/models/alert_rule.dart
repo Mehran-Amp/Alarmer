@@ -70,6 +70,9 @@ class AlertRule extends Equatable {
   /// Whether sound is enabled for this alert
   final bool soundEnabled;
 
+  /// Whether text-to-speech voice reading is enabled for this alert
+  final bool ttsEnabled;
+
   /// Whether vibration is enabled for this alert
   final bool vibrationEnabled;
 
@@ -168,6 +171,7 @@ class AlertRule extends Equatable {
     this.customNote,
     this.customSound,
     this.soundEnabled = true,
+    this.ttsEnabled = false,
     this.vibrationEnabled = true,
     this.isActive = true,
     this.isTriggered = false,
@@ -194,6 +198,7 @@ class AlertRule extends Equatable {
     String? customNote,
     String? customSound,
     bool soundEnabled = true,
+    bool ttsEnabled = false,
     bool vibrationEnabled = true,
     DateTime? cooldownUntil,
     int triggerCount = 0,
@@ -222,6 +227,7 @@ class AlertRule extends Equatable {
       customNote: customNote,
       customSound: customSound,
       soundEnabled: soundEnabled,
+      ttsEnabled: ttsEnabled,
       vibrationEnabled: vibrationEnabled,
       isActive: true,
       isTriggered: false,
@@ -255,6 +261,7 @@ class AlertRule extends Equatable {
     String? customNote,
     String? customSound,
     bool? soundEnabled,
+    bool? ttsEnabled,
     bool? vibrationEnabled,
     bool? isActive,
     bool? isTriggered,
@@ -283,6 +290,7 @@ class AlertRule extends Equatable {
       customNote: customNote ?? this.customNote,
       customSound: customSound ?? this.customSound,
       soundEnabled: soundEnabled ?? this.soundEnabled,
+      ttsEnabled: ttsEnabled ?? this.ttsEnabled,
       vibrationEnabled: vibrationEnabled ?? this.vibrationEnabled,
       basePrice: basePrice ?? this.basePrice,
       lastCheckedPrice: lastCheckedPrice ?? this.lastCheckedPrice,
@@ -317,6 +325,7 @@ class AlertRule extends Equatable {
         'customNote': customNote,
         'customSound': customSound,
         'soundEnabled': soundEnabled,
+        'ttsEnabled': ttsEnabled,
         'vibrationEnabled': vibrationEnabled,
         'isActive': isActive,
         'isTriggered': isTriggered,
@@ -350,6 +359,7 @@ class AlertRule extends Equatable {
         customNote: json['customNote'] as String?,
         customSound: json['customSound'] as String?,
         soundEnabled: json['soundEnabled'] as bool? ?? true,
+        ttsEnabled: json['ttsEnabled'] as bool? ?? false,
         vibrationEnabled: json['vibrationEnabled'] as bool? ?? true,
         isActive: json['isActive'] as bool? ?? true,
         isTriggered: json['isTriggered'] as bool? ?? false,
@@ -389,6 +399,7 @@ class AlertRule extends Equatable {
         customNote,
         customSound,
         soundEnabled,
+        ttsEnabled,
         vibrationEnabled,
         isActive,
         isTriggered,

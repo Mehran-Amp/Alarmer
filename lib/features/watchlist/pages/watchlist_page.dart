@@ -12,6 +12,7 @@ import '../../alert_engine/repositories/json_alert_rule_repository.dart';
 import '../../alert_engine/scheduler/scheduler_service.dart';
 import '../../exchanges/registry/exchange_registry.dart';
 import '../../settings/services/settings_service.dart';
+import '../widgets/alert_home_widget.dart';
 import 'create_alert_flow.dart';
 
 /// The Main Screen of Alarmer: Personal Price Alerts.
@@ -190,8 +191,13 @@ class _WatchlistPageState extends State<WatchlistPage> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.widgets_rounded, size: 22),
+            tooltip: AppStrings.get('home_widget_title', lang),
+            onPressed: () => _showHomeWidgetSheet(context, repository, lang, theme),
+          ),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
             child: ElevatedButton.icon(
               onPressed: _openCreateFlow,
               icon: const Icon(Icons.add_rounded, size: 18),
@@ -203,7 +209,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
                 backgroundColor: theme.colorScheme.primary,
                 foregroundColor: Colors.white,
                 elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -818,5 +824,81 @@ class _WatchlistPageState extends State<WatchlistPage> {
       case AlertConditionType.volumeChange:
         return '${isFa ? "جهش حجم" : "Volume jump"} ${(rule.volumePercent ?? 0).toStringAsFixed(1)}%';
     }
+  }
+
+  void _showHomeWidgetSheet(
+    BuildContext context,
+    JsonAlertRuleRepository repository,
+    String lang,
+    ThemeData theme,
+  ) {
+    final isFa = AppStrings.isRtl(lang);
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          decoration: BoxDecoration(
+            color: theme.scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    isFa ? 'پیش‌نمایش ویجت صفحه اصلی' : 'Home Screen Widget Preview',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, size: 20),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                isFa
+                    ? 'این ویجت به صورت زنده آخرین نرخ‌ها، درصد فاصله تا هدف و وضعیت هشدارها را مستقیماً روی صفحه گوشی شما نمایش می‌دهد.'
+                    : 'This live widget displays latest prices, target progress, and alert statuses directly on your device home screen.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
+                ),
+              ),
+              const SizedBox(height: 16),
+              AlertHomeWidgetView(
+                repository: repository,
+                lang: lang,
+                onAddNew: () {
+                  Navigator.of(ctx).pop();
+                  _openCreateFlow();
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

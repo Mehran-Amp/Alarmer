@@ -41,7 +41,9 @@ import {
   Volume2,
   VolumeX,
   X,
-  Zap
+  Zap,
+  LayoutGrid,
+  Mic
 } from 'lucide-react';
 
 interface AlertRule {
@@ -62,6 +64,7 @@ interface AlertRule {
   isActive: boolean;
   isTriggered: boolean;
   customNote?: string;
+  ttsEnabled?: boolean;
   lastCheckedAt?: Date;
   lastTriggeredAt?: Date;
   triggerCount: number;
@@ -378,6 +381,8 @@ export default function App() {
   const [conditionType, setConditionType] = useState<'PERCENT_CHANGE' | 'PRICE_THRESHOLD'>('PERCENT_CHANGE');
   const [direction, setDirection] = useState<'BOTH' | 'ABOVE' | 'BELOW'>('BOTH');
   const [targetValueStr, setTargetValueStr] = useState<string>('2.0');
+  const [ttsEnabled, setTtsEnabled] = useState<boolean>(false);
+  const [showHomeWidgetModal, setShowHomeWidgetModal] = useState<boolean>(false);
 
   // Notifications
   const [notifications, setNotifications] = useState<NotificationItem[]>([
@@ -464,6 +469,41 @@ export default function App() {
       osc.start();
       osc.stop(ctx.currentTime + 0.25);
     } catch (_) {}
+  };
+
+  const speakText = (text: string, lang = currentLang) => {
+    try {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(text);
+        if (lang === 'fa') {
+          utterance.lang = 'fa-IR';
+        } else if (lang === 'ar') {
+          utterance.lang = 'ar-SA';
+        } else if (lang === 'de') {
+          utterance.lang = 'de-DE';
+        } else if (lang === 'fr') {
+          utterance.lang = 'fr-FR';
+        } else if (lang === 'es') {
+          utterance.lang = 'es-ES';
+        } else if (lang === 'tr') {
+          utterance.lang = 'tr-TR';
+        } else {
+          utterance.lang = 'en-US';
+        }
+        utterance.rate = 0.95;
+        utterance.pitch = 1.0;
+        window.speechSynthesis.speak(utterance);
+      }
+    } catch (_) {}
+  };
+
+  const testTtsSpeech = (symbol = 'BTC', price = 83770) => {
+    const text = currentLang === 'fa'
+      ? `توجه، هشدار قیمت برای ${symbol} فعال شد. نرخ لحظه‌ای: ${price.toLocaleString('fa-IR')} دلار.`
+      : `Attention, price alert triggered for ${symbol}. Current price: ${price} dollars.`;
+    speakText(text, currentLang);
+    showToast(`🗣️ در حال پخش صدای هوشمند برای ${symbol}...`);
   };
 
   const showToast = (msg: string) => {
@@ -563,6 +603,13 @@ export default function App() {
         ...prev.slice(0, 25),
       ]);
       showToast(title);
+
+      if (rule.ttsEnabled) {
+        const spoken = currentLang === 'fa'
+          ? `هشدار: ${rule.baseCurrency} به قیمت ${newPrice.toLocaleString('fa-IR')} ${unit} رسید.`
+          : `Alert: ${rule.baseCurrency} reached ${newPrice} ${unit}.`;
+        speakText(spoken);
+      }
     }
 
     setRules((prev) =>
@@ -670,6 +717,7 @@ export default function App() {
       isActive: true,
       isTriggered: false,
       triggerCount: 0,
+      ttsEnabled: ttsEnabled,
       createdAt: new Date(),
     };
 
@@ -709,6 +757,7 @@ export default function App() {
       isActive: true,
       isTriggered: false,
       triggerCount: 0,
+      ttsEnabled: ttsEnabled,
       createdAt: new Date(),
     };
 
@@ -892,16 +941,26 @@ export default function App() {
                 </div>
 
                 {mobileScreen === 'alerts' && (
-                  <button
-                    onClick={() => {
-                      setCreatePath('NONE');
-                      setShowCreateModal(true);
-                    }}
-                    className={`p-1.5 rounded-xl ${accentBgClass} text-slate-950 transition-all font-bold flex items-center gap-1 text-[11px] px-2.5 shadow-md`}
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    <span>ایجاد هشدار</span>
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={() => setShowHomeWidgetModal(true)}
+                      className="p-1.5 rounded-xl border border-slate-700 bg-slate-900/90 text-slate-300 hover:text-white transition-all font-semibold flex items-center gap-1 text-[11px] px-2 shadow-sm cursor-pointer"
+                      title="پیش‌نمایش ویجت صفحه اصلی"
+                    >
+                      <LayoutGrid className="h-3.5 w-3.5 text-violet-400" />
+                      <span>ویجت</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setCreatePath('NONE');
+                        setShowCreateModal(true);
+                      }}
+                      className={`p-1.5 rounded-xl ${accentBgClass} text-slate-950 transition-all font-bold flex items-center gap-1 text-[11px] px-2.5 shadow-md cursor-pointer`}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      <span>ایجاد هشدار</span>
+                    </button>
+                  </div>
                 )}
               </div>
 
@@ -1251,8 +1310,134 @@ export default function App() {
             </div>
           </div>
 
-          {/* Right Explainer */}
+          {/* Right Explainer & Home Screen Widget */}
           <div className="lg:col-span-5 space-y-6">
+            {/* Live Interactive Home Screen Widget Card */}
+            <div className={`border rounded-3xl p-5 backdrop-blur-md ${isLight ? 'bg-white/95 border-slate-300 shadow-xl' : 'bg-slate-900/90 border-slate-800 shadow-2xl'} space-y-3.5`}>
+              <div className="flex items-center justify-between border-b pb-3 border-slate-800/80">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-violet-500/20 text-violet-400">
+                    <LayoutGrid className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                      <span>ویجت زنده صفحه اصلی (Home Widget)</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-mono">
+                        ● LIVE 24/7
+                      </span>
+                    </h3>
+                    <p className="text-[11px] text-slate-400">رصد بلادرنگ وضعیت آلارم‌ها، نرخ زنده و فاصله تا هدف روی صفحه اصلی</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    rules.forEach((r) => evaluateRule(r));
+                    showToast('🔄 تمام هشدارهای ویجت صفحه اصلی استعلام شدند.');
+                  }}
+                  className="p-1.5 rounded-xl border border-slate-700 bg-slate-800 text-slate-300 hover:text-white transition-all text-[11px] flex items-center gap-1 cursor-pointer"
+                  title="استعلام فوری همه"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">بروزرسانی</span>
+                </button>
+              </div>
+
+              {/* Active Rules List in the Widget */}
+              <div className="space-y-2.5">
+                {rules.slice(0, 4).map((rule) => {
+                  const currentPrice = rule.lastCheckedPrice || rule.basePrice;
+                  let targetProximity = 50;
+                  if (rule.conditionType === 'PRICE_THRESHOLD' && rule.targetValue > 0) {
+                    targetProximity = Math.min(100, Math.round((currentPrice / rule.targetValue) * 100));
+                  } else if (rule.conditionType === 'PERCENT_CHANGE') {
+                    const deltaPct = Math.abs(((currentPrice - rule.basePrice) / rule.basePrice) * 100);
+                    targetProximity = Math.min(100, Math.round((deltaPct / rule.targetValue) * 100));
+                  }
+
+                  const isNearTarget = targetProximity >= 90;
+                  const isTriggered = rule.isTriggered;
+
+                  return (
+                    <div
+                      key={rule.uuid}
+                      className={`p-3 rounded-2xl border transition-all ${
+                        isTriggered
+                          ? 'bg-rose-950/20 border-rose-500/40'
+                          : isNearTarget
+                          ? 'bg-amber-950/20 border-amber-500/40'
+                          : 'bg-slate-950/70 border-slate-800/80 hover:border-slate-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-xs text-white">{rule.marketSymbol}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">
+                            {rule.exchangeName}
+                          </span>
+                          {rule.ttsEnabled && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300 flex items-center gap-1 font-semibold" title="خوانش صوتی فعال">
+                              <Volume2 className="h-3 w-3" />
+                              <span>TTS</span>
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <span className="font-mono font-bold text-sm text-white block">
+                            ${currentPrice.toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Progress Bar & Status */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-[10px]">
+                          <span className="text-slate-400">
+                            شرط: {rule.conditionType === 'PRICE_THRESHOLD' ? `${rule.direction === 'ABOVE' ? '≥' : '≤'} $${rule.targetValue.toLocaleString()}` : `تغییر ${rule.targetValue}%`}
+                          </span>
+                          <span className={`font-semibold ${isTriggered ? 'text-rose-400' : isNearTarget ? 'text-amber-400' : 'text-emerald-400'}`}>
+                            {isTriggered ? '🚨 فراخوانده شد' : isNearTarget ? `⚠️ ${targetProximity}% (نزدیک هدف)` : `پایش فعال • ${targetProximity}%`}
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 ${
+                              isTriggered ? 'bg-rose-500' : isNearTarget ? 'bg-amber-500' : 'bg-emerald-500'
+                            }`}
+                            style={{ width: `${targetProximity}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="mt-2 pt-1.5 border-t border-slate-800/60 flex items-center justify-between text-[10px] text-slate-400">
+                        <span>آخرین بررسی: {formatTimeAgo(rule.lastCheckedAt || new Date())}</span>
+                        <div className="flex items-center gap-2">
+                          {rule.ttsEnabled && (
+                            <button
+                              onClick={() => testTtsSpeech(rule.baseCurrency, currentPrice)}
+                              className="text-violet-400 hover:text-violet-300 font-semibold flex items-center gap-1 cursor-pointer"
+                            >
+                              <span>تست صدا</span>
+                            </button>
+                          )}
+                          <button
+                            onClick={() => evaluateRule(rule, 1.5)}
+                            className="text-emerald-400 hover:text-emerald-300 font-semibold cursor-pointer"
+                          >
+                            تست شبیه‌سازی
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="pt-1 flex items-center justify-between text-[11px] text-slate-400 border-t border-slate-800">
+                <span>📱 طراحی شده برای ویجت اندروید ۱۴ و iOS ۱۷</span>
+                <span className="font-mono text-emerald-400 font-semibold">Real-Time Sync</span>
+              </div>
+            </div>
+
             <div className={`border rounded-2xl p-6 backdrop-blur-sm ${isLight ? 'bg-white/80 border-slate-200 shadow-sm' : 'bg-slate-900/60 border-slate-800'}`}>
               <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-emerald-400" />
@@ -1673,6 +1858,36 @@ export default function App() {
                       </div>
                     )}
 
+                    {/* Text-to-Speech (TTS) Voice Toggle */}
+                    <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Volume2 className={`h-4 w-4 ${ttsEnabled ? accentClass : 'text-slate-500'}`} />
+                          <div>
+                            <span className="font-bold text-xs text-white block">اعلام صوتی هوشمند (Text to Speech)</span>
+                            <span className="text-[10px] text-slate-400 block">خوانش نام ارز و نرخ با صدای طبیعی هنگام وقوع هشدار</span>
+                          </div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={ttsEnabled}
+                          onChange={(e) => setTtsEnabled(e.target.checked)}
+                          className="h-5 w-5 rounded border-slate-700 text-emerald-500 focus:ring-emerald-400 bg-slate-900 cursor-pointer"
+                        />
+                      </div>
+                      {ttsEnabled && (
+                        <div className="pt-1.5 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => testTtsSpeech(selectedCryptoCoin, cryptoPrices[selectedCryptoCoin]?.currentPrice || 83770)}
+                            className="px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-900 text-slate-300 text-[10px] font-semibold flex items-center gap-1.5 hover:text-white cursor-pointer"
+                          >
+                            <span>🗣️ تست نمونه صدای فارسی</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
                     <div className="flex items-center gap-2 pt-2">
                       <button
                         type="button"
@@ -1965,6 +2180,36 @@ export default function App() {
                       </div>
                     )}
 
+                    {/* Text-to-Speech (TTS) Voice Toggle */}
+                    <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Volume2 className={`h-4 w-4 ${ttsEnabled ? accentClass : 'text-slate-500'}`} />
+                          <div>
+                            <span className="font-bold text-xs text-white block">اعلام صوتی هوشمند (Text to Speech)</span>
+                            <span className="text-[10px] text-slate-400 block">خوانش نام دارایی و نرخ با صدای طبیعی هنگام وقوع هشدار</span>
+                          </div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={ttsEnabled}
+                          onChange={(e) => setTtsEnabled(e.target.checked)}
+                          className="h-5 w-5 rounded border-slate-700 text-blue-500 focus:ring-blue-400 bg-slate-900 cursor-pointer"
+                        />
+                      </div>
+                      {ttsEnabled && (
+                        <div className="pt-1.5 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => testTtsSpeech(selectedMacroKey, macroPrices[selectedMacroKey]?.currentPrice || 4.28)}
+                            className="px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-900 text-slate-300 text-[10px] font-semibold flex items-center gap-1.5 hover:text-white cursor-pointer"
+                          >
+                            <span>🗣️ تست نمونه صدای فارسی</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+
                     <div className="flex items-center gap-2 pt-2">
                       <button
                         type="button"
@@ -2060,6 +2305,115 @@ export default function App() {
                 className="flex-1 py-2.5 rounded-xl bg-emerald-500 text-slate-950 font-bold text-xs"
               >
                 تأیید و بازیابی
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* HOME SCREEN WIDGET PREVIEW MODAL */}
+      {showHomeWidgetModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg p-6 space-y-4 text-right shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-violet-500/20 text-violet-400">
+                  <LayoutGrid className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-white">پیش‌نمایش ویجت صفحه اصلی</h3>
+                  <span className="text-[11px] text-slate-400 font-mono">Android & iOS 24/7 Home Widget</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowHomeWidgetModal(false)}
+                className="p-1 rounded-xl bg-slate-800 text-slate-400 hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-slate-300 leading-relaxed">
+              این ویجت هوشمند را می‌توانید به صفحه اصلی گوشی (Homescreen) خود اضافه کنید تا بدون باز کردن برنامه، آخرین نوسانات بازار و وضعیت هشدارهای فعال را به صورت زنده رصد فرمایید:
+            </p>
+
+            {/* Widget Simulated Container */}
+            <div className="p-4 rounded-3xl bg-slate-950 border-2 border-violet-500/30 shadow-xl space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="font-bold text-xs text-white">⚡ ALARMER • مانیتور زنده</span>
+                </div>
+                <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                  <span className="font-mono">{new Date().toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' })}</span>
+                  <button
+                    onClick={() => {
+                      rules.forEach((r) => evaluateRule(r));
+                      showToast('بروزرسانی تمام قیمت‌های ویجت انجام شد.');
+                    }}
+                    className="p-1 rounded-lg bg-slate-800 text-slate-300 hover:text-white"
+                    title="بروزرسانی زنده"
+                  >
+                    <RefreshCw className="h-3 w-3" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+                {rules.map((rule) => {
+                  const currentPrice = rule.lastCheckedPrice || rule.basePrice;
+                  let targetProximity = 50;
+                  if (rule.conditionType === 'PRICE_THRESHOLD' && rule.targetValue > 0) {
+                    targetProximity = Math.min(100, Math.round((currentPrice / rule.targetValue) * 100));
+                  } else if (rule.conditionType === 'PERCENT_CHANGE') {
+                    const deltaPct = Math.abs(((currentPrice - rule.basePrice) / rule.basePrice) * 100);
+                    targetProximity = Math.min(100, Math.round((deltaPct / rule.targetValue) * 100));
+                  }
+
+                  const isNearTarget = targetProximity >= 90;
+                  const isTriggered = rule.isTriggered;
+
+                  return (
+                    <div
+                      key={rule.uuid}
+                      className="p-2.5 rounded-xl bg-slate-900 border border-slate-800/80 flex items-center justify-between text-xs"
+                    >
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-white">{rule.marketSymbol}</span>
+                          <span className="text-[9px] px-1 rounded bg-slate-800 text-slate-400">{rule.exchangeName}</span>
+                          {rule.ttsEnabled && <Volume2 className="h-3 w-3 text-violet-400" />}
+                        </div>
+                        <div className="text-[10px] text-slate-400 flex items-center gap-1">
+                          <span>هدف: {rule.conditionType === 'PRICE_THRESHOLD' ? `$${rule.targetValue}` : `${rule.targetValue}%`}</span>
+                          <span>•</span>
+                          <span className={isTriggered ? 'text-rose-400 font-bold' : isNearTarget ? 'text-amber-400 font-bold' : 'text-emerald-400'}>
+                            {targetProximity}% تا هدف
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="text-right">
+                        <span className="font-mono font-bold text-white block">${currentPrice.toLocaleString()}</span>
+                        <button
+                          onClick={() => evaluateRule(rule, 1.5)}
+                          className="text-[10px] text-emerald-400 hover:underline cursor-pointer"
+                        >
+                          تست آلارم
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-1">
+              <button
+                onClick={() => setShowHomeWidgetModal(false)}
+                className="px-5 py-2.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs"
+              >
+                بستن پنجره
               </button>
             </div>
           </div>
