@@ -634,7 +634,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
   }
 
   Widget _buildCryptoExchangePicker(ThemeData theme, String lang) {
-    final allExchanges = widget.registry.getAll();
+    final allExchanges = widget.registry.getAll().where((ex) => ex.id != 'global_stocks').toList();
     final filtered = allExchanges.where((ex) {
       if (_selectedCategory != ExchangeCategory.all && ex.category != _selectedCategory) {
         return false;

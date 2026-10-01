@@ -744,6 +744,10 @@ class _WatchlistPageState extends State<WatchlistPage> {
         return isFa ? 'نوبیتکس' : 'Nobitex';
       case 'wallex':
         return isFa ? 'والکس' : 'Wallex';
+      case 'tabdeal':
+        return isFa ? 'تبدیل' : 'Tabdeal';
+      case 'bitbarg':
+        return isFa ? 'بیت‌برگ' : 'Bitbarg';
       case 'coinbase':
         return 'Coinbase';
       case 'kucoin':
@@ -752,6 +756,20 @@ class _WatchlistPageState extends State<WatchlistPage> {
         return 'OKX';
       case 'bybit':
         return 'Bybit';
+      case 'mexc':
+        return 'MEXC';
+      case 'gateio':
+        return 'Gate.io';
+      case 'bingx':
+        return 'BingX';
+      case 'bitget':
+        return 'Bitget';
+      case 'kraken':
+        return 'Kraken';
+      case 'coinex':
+        return 'CoinEx';
+      case 'coinmarketcap':
+        return 'CoinMarketCap';
       case 'coingecko':
         return 'CoinGecko';
       default:
