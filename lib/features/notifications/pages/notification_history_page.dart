@@ -186,6 +186,23 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
 
   Widget _buildLogCard(NotificationLog log, ThemeData theme) {
     final isWarning = log.message.contains('cooldown') || log.message.contains('Suppressed');
+    final isUpward = log.title.contains('🟢') ||
+        log.title.contains('صعود') ||
+        log.title.contains('↗️') ||
+        log.title.contains('+') ||
+        log.title.contains('Surged');
+    final isDownward = log.title.contains('🔴') ||
+        log.title.contains('افت') ||
+        log.title.contains('ریزش') ||
+        log.title.contains('↘️') ||
+        log.title.contains('-') ||
+        log.title.contains('Dropped');
+
+    final Color statusColor = isWarning
+        ? AppTokens.warning
+        : (isUpward
+            ? AppTokens.positive
+            : (isDownward ? AppTokens.negative : theme.colorScheme.primary));
 
     return Container(
       margin: const EdgeInsets.symmetric(
@@ -197,9 +214,8 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isWarning
-              ? AppTokens.warning.withValues(alpha: 0.4)
-              : theme.dividerColor,
+          color: statusColor.withValues(alpha: 0.35),
+          width: 1.2,
         ),
       ),
       child: Column(
@@ -210,6 +226,15 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
             children: [
               Row(
                 children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: statusColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Text(
                     log.marketSymbol,
                     style: TextStyle(
@@ -249,11 +274,24 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
           ),
           const SizedBox(height: AppTokens.space6),
 
+          if (log.title.isNotEmpty) ...[
+            Text(
+              log.title,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.bold,
+                color: statusColor,
+              ),
+            ),
+            const SizedBox(height: 4),
+          ],
+
           Text(
             log.message,
             style: TextStyle(
               fontSize: 12,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
+              height: 1.35,
             ),
           ),
           const SizedBox(height: AppTokens.space6),
@@ -261,17 +299,23 @@ class _NotificationHistoryPageState extends State<NotificationHistoryPage> {
           Row(
             children: [
               Text(
-                'Trigger Price: ',
-                style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                'قیمت فعال‌سازی: ',
+                style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.55)),
               ),
               Text(
-                '\$${log.triggeredPrice.toStringAsFixed(2)}',
+                '\$${log.triggeredPrice.toStringAsFixed(log.triggeredPrice < 5 ? 4 : 2)}',
                 style: TextStyle(
                   fontFamily: 'monospace',
-                  fontSize: 12,
-                  color: theme.colorScheme.primary,
-                  fontWeight: FontWeight.w700,
+                  fontSize: 12.5,
+                  color: statusColor,
+                  fontWeight: FontWeight.w800,
                 ),
+              ),
+              const SizedBox(width: 6),
+              Icon(
+                isUpward ? Icons.trending_up_rounded : (isDownward ? Icons.trending_down_rounded : Icons.info_outline_rounded),
+                size: 16,
+                color: statusColor,
               ),
             ],
           ),

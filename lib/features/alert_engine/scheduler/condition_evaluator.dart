@@ -24,7 +24,7 @@ class EvaluationResult {
   static const notTriggered = EvaluationResult(isTriggered: false);
 }
 
-/// Pure evaluation functions per condition type. Zero I/O, 100% deterministic.
+/// Pure evaluation functions per condition type with color-coded emojis and arrow formatting.
 abstract class ConditionEvaluator {
   /// Evaluates an [AlertRule] against current market price and volume
   static EvaluationResult evaluate({
@@ -44,9 +44,17 @@ abstract class ConditionEvaluator {
     }
   }
 
+  static String _formatVal(double val) {
+    if (val.abs() >= 1000) {
+      return val.toStringAsFixed(2);
+    } else if (val.abs() >= 1) {
+      return val.toStringAsFixed(val < 10 ? 3 : 2);
+    } else {
+      return val.toStringAsFixed(val < 0.01 ? 6 : 4);
+    }
+  }
+
   /// 1. Price Threshold (One-shot):
-  /// Trigger when current price crosses the target in the chosen direction.
-  /// After trigger: isActive = false, isTriggered = true.
   static EvaluationResult _evaluatePriceThreshold(
     AlertRule rule,
     double currentPrice,
@@ -55,25 +63,27 @@ abstract class ConditionEvaluator {
     if (target <= 0.0) return EvaluationResult.notTriggered;
 
     bool triggered = false;
+    final isUpward = rule.direction == AlertDirection.above ||
+        (rule.direction == AlertDirection.bothSides && currentPrice >= target);
+
     if (rule.direction == AlertDirection.above) {
       triggered = currentPrice >= target;
     } else if (rule.direction == AlertDirection.below) {
       triggered = currentPrice <= target;
     } else {
-      // Both sides threshold
       triggered = currentPrice >= target || currentPrice <= target;
     }
 
     if (!triggered) return EvaluationResult.notTriggered;
 
-    final dirText = rule.direction == AlertDirection.above
-        ? 'crossed above'
-        : (rule.direction == AlertDirection.below ? 'crossed below' : 'hit target');
+    final emoji = isUpward ? '🟢' : '🔴';
+    final arrow = isUpward ? '↗️' : '↘️';
+    final actionText = isUpward ? 'عبور به بالای هدف' : 'افت به زیر هدف';
 
     return EvaluationResult(
       isTriggered: true,
-      title: '${rule.pair.displayName} Target Hit',
-      message: '${rule.pair.displayName} $dirText target \$${target.toStringAsFixed(2)} at \$${currentPrice.toStringAsFixed(2)} on ${rule.exchangeId.toUpperCase()}.',
+      title: '$emoji 🎯 ${rule.pair.displayName} $actionText $arrow',
+      message: '💰 قیمت زنده: \$${_formatVal(currentPrice)} $emoji\n🎯 تارگت تعیین‌شده: \$${_formatVal(target)} · صرافی ${rule.exchangeId.toUpperCase()}',
       newIsActive: false,     // One-shot: deactivates
       newIsTriggered: true,   // Marked as triggered in UI
       newBasePrice: currentPrice,
@@ -81,9 +91,6 @@ abstract class ConditionEvaluator {
   }
 
   /// 2. Percent Change (Recurring):
-  /// Trigger when percentage change from basePrice >= percent in chosen direction (Up, Down, or Both ±%).
-  /// After trigger: updates basePrice = currentPrice so next check calculates from the latest price.
-  /// Remains active continuously until paused or deleted.
   static EvaluationResult _evaluatePercentChange(
     AlertRule rule,
     double currentPrice,
@@ -101,19 +108,21 @@ abstract class ConditionEvaluator {
     } else if (rule.direction == AlertDirection.below) {
       triggered = actualPercent <= -targetPercent;
     } else {
-      // Both directions (±%)
       triggered = actualPercent.abs() >= targetPercent;
     }
 
     if (!triggered) return EvaluationResult.notTriggered;
 
-    final sign = actualPercent >= 0 ? '+' : '';
-    final dirText = actualPercent >= 0 ? 'Surged ▲' : 'Dropped ▼';
+    final isUpward = actualPercent >= 0;
+    final emoji = isUpward ? '🟢' : '🔴';
+    final arrow = isUpward ? '▲ ↗️' : '▼ ↘️';
+    final sign = isUpward ? '+' : '';
+    final actionText = isUpward ? 'صعود شارپ' : 'ریزش قیمت';
 
     return EvaluationResult(
       isTriggered: true,
-      title: '${rule.pair.displayName} $dirText $sign${actualPercent.toStringAsFixed(2)}%',
-      message: '${rule.pair.displayName} moved $sign${actualPercent.toStringAsFixed(2)}% (target: ±$targetPercent%) from base \$${base.toStringAsFixed(2)} to \$${currentPrice.toStringAsFixed(2)}.',
+      title: '$emoji 📈 ${rule.pair.displayName} $actionText $sign${actualPercent.toStringAsFixed(2)}% $arrow',
+      message: '📊 نوسان ثبت‌شده: $emoji $sign${actualPercent.toStringAsFixed(2)}% (هدف: ±$targetPercent%)\n💰 قیمت فعلی: \$${_formatVal(currentPrice)} (مبنا: \$${_formatVal(base)})',
       newBasePrice: currentPrice, // Update baseline for next cycle to latest price!
       newIsActive: true,          // Stays active forever until paused
       newIsTriggered: false,
@@ -121,8 +130,6 @@ abstract class ConditionEvaluator {
   }
 
   /// 3. Absolute Price Change (Recurring):
-  /// Trigger when abs(currentPrice - basePrice) >= deltaAbsolute in chosen direction.
-  /// After trigger: basePrice = currentPrice, stays active.
   static EvaluationResult _evaluateAbsolutePriceChange(
     AlertRule rule,
     double currentPrice,
@@ -139,56 +146,51 @@ abstract class ConditionEvaluator {
     } else if (rule.direction == AlertDirection.below) {
       triggered = diff <= -delta;
     } else {
-      // Both directions
       triggered = diff.abs() >= delta;
     }
 
     if (!triggered) return EvaluationResult.notTriggered;
 
-    final dirText = diff >= 0 ? 'gained' : 'lost';
+    final isUpward = diff >= 0;
+    final emoji = isUpward ? '🟢' : '🔴';
+    final arrow = isUpward ? '▲ ↗️' : '▼ ↘️';
+    final sign = isUpward ? '+' : '-';
+
     return EvaluationResult(
       isTriggered: true,
-      title: '${rule.pair.displayName} Price Delta',
-      message: '${rule.pair.displayName} $dirText \$${diff.abs().toStringAsFixed(2)} (delta: \$${delta.toStringAsFixed(2)}) reaching \$${currentPrice.toStringAsFixed(2)}.',
-      newBasePrice: currentPrice, // Update baseline
-      newIsActive: true,          // Stays active forever
+      title: '$emoji ${rule.pair.displayName} تغییر دلاری $sign\$${_formatVal(diff.abs())} $arrow',
+      message: '💵 تغییرات دلاری: $emoji $sign\$${_formatVal(diff.abs())}\n💰 قیمت لحظه‌ای: \$${_formatVal(currentPrice)}',
+      newBasePrice: currentPrice,
+      newIsActive: true,
       newIsTriggered: false,
     );
   }
 
   /// 4. Volume Change (Recurring):
-  /// Trigger when volume percentage change from baseVolume >= volumePercent in chosen direction.
-  /// After trigger: baseVolume = currentVolume, stays active.
   static EvaluationResult _evaluateVolumeChange(
     AlertRule rule,
     double currentVolume,
   ) {
-    final base = rule.baseVolume ?? currentVolume;
-    final targetPercent = rule.volumePercent ?? 0.0;
-    if (base <= 0.0 || targetPercent <= 0.0) return EvaluationResult.notTriggered;
-
-    final diff = currentVolume - base;
-    final actualPercent = (diff / base) * 100.0;
-
-    bool triggered = false;
-    if (rule.direction == AlertDirection.above) {
-      triggered = actualPercent >= targetPercent;
-    } else if (rule.direction == AlertDirection.below) {
-      triggered = actualPercent <= -targetPercent;
-    } else {
-      triggered = actualPercent.abs() >= targetPercent;
+    final baseVolume = rule.baseVolume ?? currentVolume;
+    final volumePercent = rule.volumePercent ?? 0.0;
+    if (baseVolume <= 0.0 || volumePercent <= 0.0) {
+      return EvaluationResult.notTriggered;
     }
 
-    if (!triggered) return EvaluationResult.notTriggered;
+    final diff = currentVolume - baseVolume;
+    final actualPercent = (diff / baseVolume) * 100.0;
 
-    final dirText = actualPercent >= 0 ? 'surged' : 'dropped';
-    return EvaluationResult(
-      isTriggered: true,
-      title: '${rule.pair.displayName} Volume Alert',
-      message: '${rule.pair.displayName} 24h volume $dirText ${actualPercent.abs().toStringAsFixed(1)}% to \$${currentVolume.toStringAsFixed(0)}.',
-      newBaseVolume: currentVolume, // Update baseline volume
-      newIsActive: true,            // Stays active forever
-      newIsTriggered: false,
-    );
+    if (actualPercent >= volumePercent) {
+      return EvaluationResult(
+        isTriggered: true,
+        title: '📊 ⚡ ${rule.pair.displayName} جهش حجم معاملات +${actualPercent.toStringAsFixed(1)}%',
+        message: '🚀 حجم ۲۴ ساعته بازار با رشد +${actualPercent.toStringAsFixed(1)}% به \$${_formatVal(currentVolume)} رسید.',
+        newBaseVolume: currentVolume,
+        newIsActive: true,
+        newIsTriggered: false,
+      );
+    }
+
+    return EvaluationResult.notTriggered;
   }
 }
