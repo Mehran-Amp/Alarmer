@@ -10,6 +10,7 @@ class HistoryGroupHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final title = _formatHeader(date);
 
     return Container(
@@ -18,12 +19,14 @@ class HistoryGroupHeader extends StatelessWidget {
         horizontal: AppTokens.space16,
         vertical: AppTokens.space8,
       ),
-      color: AppTokens.background,
+      color: theme.scaffoldBackgroundColor,
       child: Text(
         title.toUpperCase(),
-        style: AppTokens.caption.copyWith(
+        style: TextStyle(
+          fontSize: 11,
           letterSpacing: 1.0,
           fontWeight: FontWeight.w700,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
         ),
       ),
     );
@@ -40,10 +43,7 @@ class HistoryGroupHeader extends StatelessWidget {
     } else if (checkDate == yesterday) {
       return S.dateYesterday;
     } else {
-      const months = [
-        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-      ];
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
       return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
     }
   }

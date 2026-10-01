@@ -4,6 +4,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 
 import 'app/navigation/app_shell.dart';
+import 'core/localization/app_strings.dart';
 import 'features/alert_engine/bloc/alert_rules_bloc.dart';
 import 'features/alert_engine/bloc/alert_rules_event.dart';
 import 'features/alert_engine/repositories/json_alert_rule_repository.dart';

@@ -126,7 +126,9 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
     if (_selectedExchange == null) return;
     setState(() => _isLoadingPairs = true);
     try {
-      final pairs = await _selectedExchange!.fetchSupportedPairs(forceRefresh: forceRefresh);
+      final pairs = forceRefresh
+          ? await widget.registry.refreshCurrencyPairs(_selectedExchange!.id)
+          : await widget.registry.getCurrencyPairs(_selectedExchange!.id);
       if (mounted) {
         setState(() {
           _exchangePairs = pairs;
@@ -848,9 +850,17 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
 
   Widget _buildConditionAndFrequencyStep(ThemeData theme, String lang) {
     final isFa = lang == 'fa' || lang == 'ar' || lang == 'ckb';
-    final assetName = _flowType == MarketFlowType.crypto
-        ? _selectedPair?.displayName ?? ''
-        : (isFa ? _selectedMacroAsset?['nameFa'] : _selectedMacroAsset?['name']) ?? '';
+    final String assetName;
+    if (_flowType == MarketFlowType.crypto) {
+      assetName = _selectedPair?.displayName ?? '';
+    } else {
+      final macro = _selectedMacroAsset;
+      if (macro != null) {
+        assetName = (isFa ? macro['nameFa'] : macro['name']) as String? ?? '';
+      } else {
+        assetName = '';
+      }
+    }
 
     return ListView(
       padding: const EdgeInsets.all(20),
