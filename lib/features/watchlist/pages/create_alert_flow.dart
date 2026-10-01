@@ -925,13 +925,10 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
 
   Widget _buildMacroAssetPicker(ThemeData theme, String lang) {
     final allAssets = GlobalStocksExchange.predefinedStocks;
+    final isFa = lang == 'fa' || lang == 'ar' || lang == 'ckb';
     final filtered = allAssets.where((a) {
       if (_macroCategoryFilter != 'all') {
-        if (_macroCategoryFilter == 'bonds' && a['cat'] != 'Bonds') return false;
-        if (_macroCategoryFilter == 'forex' && a['cat'] != 'Forex') return false;
-        if (_macroCategoryFilter == 'metals' && a['cat'] != 'Metals') return false;
-        if (_macroCategoryFilter == 'stocks' && a['cat'] != 'Tech' && a['cat'] != 'Finance') return false;
-        if (_macroCategoryFilter == 'index' && a['cat'] != 'Index') return false;
+        if (a['cat'] != _macroCategoryFilter) return false;
       }
       final q = _macroSearchQuery.trim().toLowerCase();
       if (q.isEmpty) return true;
@@ -949,7 +946,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
             onChanged: (val) => setState(() => _macroSearchQuery = val),
             style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurface),
             decoration: InputDecoration(
-              hintText: AppStrings.get('search_macro_hint', lang),
+              hintText: isFa ? 'جستجوی نماد، طلا، نفت، شاخص‌ها، سهام، فارکس...' : 'Search symbol, Gold, Oil, Indices, Stocks, Forex...',
               prefixIcon: Icon(Icons.search, size: 20, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
               filled: true,
               fillColor: theme.colorScheme.surface,
@@ -965,12 +962,14 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Row(
             children: [
-              _buildMacroChip(AppStrings.get('all_symbols', lang), 'all', theme),
-              _buildMacroChip(AppStrings.get('us_bonds', lang), 'bonds', theme),
-              _buildMacroChip(AppStrings.get('forex_pairs', lang), 'forex', theme),
-              _buildMacroChip(AppStrings.get('gold_metals', lang), 'metals', theme),
-              _buildMacroChip(AppStrings.get('wallstreet_stocks', lang), 'stocks', theme),
-              _buildMacroChip(AppStrings.get('global_indices', lang), 'index', theme),
+              _buildMacroChip(isFa ? '🌐 همه نمادها' : 'All', 'all', theme),
+              _buildMacroChip(isFa ? '🏛️ اوراق و شاخص دلار' : 'Macro & DXY', 'Macro', theme),
+              _buildMacroChip(isFa ? '📊 شاخص‌های جهانی' : 'Indices', 'Indices', theme),
+              _buildMacroChip(isFa ? '🥇 طلا، نقره و انرژی' : 'Metals & Energy', 'Commodities', theme),
+              _buildMacroChip(isFa ? '💱 فارکس' : 'Forex', 'Forex', theme),
+              _buildMacroChip(isFa ? '🤖 هوش مصنوعی و مگاکپ‌ها' : 'US Tech & AI', 'Tech', theme),
+              _buildMacroChip(isFa ? '🇨🇳 غول‌های چین و برقی' : 'China & EVs', 'China', theme),
+              _buildMacroChip(isFa ? '🏦 بانک‌ها و واسطه‌های کریپتو' : 'Financials & Proxies', 'Financials', theme),
             ],
           ),
         ),
@@ -983,8 +982,8 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
             itemBuilder: (context, index) {
               final asset = filtered[index];
               final price = (asset['price'] as num).toDouble();
-              final isFa = lang == 'fa' || lang == 'ar' || lang == 'ckb';
               final displayName = isFa ? (asset['nameFa'] as String) : (asset['name'] as String);
+              final iconStr = asset['icon']?.toString() ?? '📊';
 
               return InkWell(
                 onTap: () => _onMacroAssetChosen(asset),
@@ -999,14 +998,17 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                   child: Row(
                     children: [
                       Container(
-                        width: 36,
-                        height: 36,
+                        width: 38,
+                        height: 38,
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.secondary.withValues(alpha: 0.15),
+                          color: theme.colorScheme.secondary.withValues(alpha: 0.12),
                           shape: BoxShape.circle,
                         ),
                         alignment: Alignment.center,
-                        child: Icon(Icons.show_chart_rounded, color: theme.colorScheme.secondary, size: 20),
+                        child: Text(
+                          iconStr,
+                          style: const TextStyle(fontSize: 18),
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -1019,8 +1021,9 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '${asset['symbol']} · ${asset['cat']}',
+                              '${asset['symbol']} · ${asset['name']}',
                               style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.55)),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),

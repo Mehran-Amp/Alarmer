@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import '../../settings/services/sound_manager.dart';
 
 /// Service responsible for dispatching mission-critical system notifications.
 /// Uses Time-Sensitive notifications on iOS and Maximum High-Priority Alarm channels on Android.
@@ -88,16 +89,28 @@ class NotificationService {
     required String title,
     required String body,
     String? payload,
+    String soundName = 'alarm_siren',
+    double volume = 1.0,
+    bool soundEnabled = true,
+    bool vibrationEnabled = true,
   }) async {
-    // 1. In-App Audio & Haptic Feedback
-    try {
-      await SystemSound.play(SystemSoundType.alert);
-      await HapticFeedback.heavyImpact();
-      await Future.delayed(const Duration(milliseconds: 150));
-      await HapticFeedback.heavyImpact();
-    } catch (_) {}
+    // 1. Play Full Synthetic Alarm Audio Tone
+    if (soundEnabled) {
+      try {
+        await SoundManager().playPreset(soundName, volume: volume);
+      } catch (_) {}
+    }
 
-    // 2. System Level Notification Banner
+    // 2. Heavy Haptic Feedback
+    if (vibrationEnabled) {
+      try {
+        await HapticFeedback.heavyImpact();
+        await Future.delayed(const Duration(milliseconds: 150));
+        await HapticFeedback.heavyImpact();
+      } catch (_) {}
+    }
+
+    // 3. System Level Notification Banner
     final vibrationPattern = Int64List.fromList([0, 500, 200, 500, 200, 500]);
     final androidDetails = AndroidNotificationDetails(
       channelId,
@@ -106,7 +119,7 @@ class NotificationService {
       importance: Importance.max,
       priority: Priority.max,
       ticker: 'Alarmer Price Alert',
-      enableVibration: true,
+      enableVibration: vibrationEnabled,
       vibrationPattern: vibrationPattern,
       playSound: true,
       fullScreenIntent: true,

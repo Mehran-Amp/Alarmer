@@ -60,45 +60,6 @@ class JsonAlertRuleRepository {
           }
         }
       }
-
-      if (_rules.isEmpty) {
-        _rules.add(
-          AlertRule(
-            uuid: 'rule-btc-default',
-            exchangeId: 'binance',
-            baseCurrency: 'BTC',
-            counterCurrency: 'USDT',
-            marketSymbol: 'BTCUSDT',
-            conditionType: AlertConditionType.percentChange,
-            direction: AlertDirection.bothSides,
-            percent: 2.5,
-            triggerMode: TriggerMode.recurring,
-            checkIntervalSeconds: 30,
-            basePrice: 83770.0,
-            lastCheckedPrice: 83770.0,
-            isActive: true,
-            createdAt: DateTime.now(),
-          ),
-        );
-        _rules.add(
-          AlertRule(
-            uuid: 'rule-us10y-default',
-            exchangeId: 'global_stocks',
-            baseCurrency: '^TNX',
-            counterCurrency: 'USD',
-            marketSymbol: '^TNX/USD',
-            conditionType: AlertConditionType.percentChange,
-            direction: AlertDirection.bothSides,
-            percent: 1.0,
-            triggerMode: TriggerMode.recurring,
-            checkIntervalSeconds: 60,
-            basePrice: 4.28,
-            lastCheckedPrice: 4.28,
-            isActive: true,
-            createdAt: DateTime.now().subtract(const Duration(minutes: 5)),
-          ),
-        );
-      }
     } catch (e, stack) {
       debugPrint('Error loading alerts.json (starting fresh): $e\n$stack');
       _rules.clear();

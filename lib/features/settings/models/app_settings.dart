@@ -12,12 +12,18 @@ class AppSettings {
   final String language;
   final bool soundEnabled;
   final bool vibrationEnabled;
+  final String soundName;
+  final double alarmVolume;
+  final int alarmDurationSec;
 
   const AppSettings({
     this.themePalette = AppThemePalette.darkGreen,
     this.language = 'fa',
     this.soundEnabled = true,
     this.vibrationEnabled = true,
+    this.soundName = 'alarm_siren',
+    this.alarmVolume = 1.0,
+    this.alarmDurationSec = 5,
   });
 
   AppSettings copyWith({
@@ -25,12 +31,18 @@ class AppSettings {
     String? language,
     bool? soundEnabled,
     bool? vibrationEnabled,
+    String? soundName,
+    double? alarmVolume,
+    int? alarmDurationSec,
   }) {
     return AppSettings(
       themePalette: themePalette ?? this.themePalette,
       language: language ?? this.language,
       soundEnabled: soundEnabled ?? this.soundEnabled,
       vibrationEnabled: vibrationEnabled ?? this.vibrationEnabled,
+      soundName: soundName ?? this.soundName,
+      alarmVolume: alarmVolume ?? this.alarmVolume,
+      alarmDurationSec: alarmDurationSec ?? this.alarmDurationSec,
     );
   }
 
@@ -39,6 +51,9 @@ class AppSettings {
         'language': language,
         'soundEnabled': soundEnabled,
         'vibrationEnabled': vibrationEnabled,
+        'soundName': soundName,
+        'alarmVolume': alarmVolume,
+        'alarmDurationSec': alarmDurationSec,
       };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -58,6 +73,9 @@ class AppSettings {
       language: (json['language'] as String?) ?? 'fa',
       soundEnabled: (json['soundEnabled'] as bool?) ?? true,
       vibrationEnabled: (json['vibrationEnabled'] as bool?) ?? true,
+      soundName: (json['soundName'] as String?) ?? 'alarm_siren',
+      alarmVolume: (json['alarmVolume'] as num?)?.toDouble() ?? 1.0,
+      alarmDurationSec: (json['alarmDurationSec'] as int?) ?? 5,
     );
   }
 
