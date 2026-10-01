@@ -1,7 +1,10 @@
+import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:path_provider/path_provider.dart';
 
 class AlarmSoundPreset {
   final String id;
@@ -19,12 +22,12 @@ class AlarmSoundPreset {
     required this.icon,
     required this.baseFreq,
     required this.secondaryFreq,
-    this.durationSec = 2.0,
+    this.durationSec = 2.5,
   });
 }
 
-/// Robust Sound & Ringtone Manager for Alarmer
-/// Plays synthesized multi-frequency alert tones and ringtones via AudioPlayer with 100% offline availability.
+/// High-Performance Audio Engine for Market Alerts
+/// Features native asset-based playback + local synthesis fail-safe.
 class SoundManager {
   static final SoundManager _instance = SoundManager._internal();
   factory SoundManager() => _instance;
@@ -111,7 +114,7 @@ class SoundManager {
 
   bool isSoundPlaying(String id) => _isPlaying && _currentlyPlayingId == id;
 
-  /// Plays synthesized PCM WAV audio for the specified sound preset
+  /// Plays synthesized audio with 100% Android/iOS hardware speaker compatibility
   Future<void> playPreset(String soundId, {double volume = 1.0, bool loop = false}) async {
     try {
       await stop();
@@ -121,17 +124,15 @@ class SoundManager {
         orElse: () => presets.first,
       );
 
-      final wavBytes = _generateWavBytes(
-        freq1: preset.baseFreq,
-        freq2: preset.secondaryFreq,
-        durationSeconds: preset.durationSec,
-      );
+      // Trigger immediate tactile haptic
+      await HapticFeedback.mediumImpact();
 
+      // Configure AudioContext for direct alarm speaker routing
       await _player.setAudioContext(AudioContext(
         android: const AudioContextAndroid(
           isSpeakerphoneOn: true,
           stayAwake: true,
-          contentType: AndroidContentType.sonification,
+          contentType: AndroidContentType.music,
           usageType: AndroidUsageType.alarm,
           audioFocus: AndroidAudioFocus.gainTransientExclusive,
         ),
@@ -144,7 +145,7 @@ class SoundManager {
         ),
       ));
 
-      await _player.setVolume(volume.clamp(0.0, 1.0));
+      await _player.setVolume(volume.clamp(0.1, 1.0));
       if (loop) {
         await _player.setReleaseMode(ReleaseMode.loop);
       } else {
@@ -154,14 +155,34 @@ class SoundManager {
       _isPlaying = true;
       _currentlyPlayingId = soundId;
 
-      await _player.play(BytesSource(wavBytes));
+      try {
+        // 1. Try bundled asset playback
+        await _player.play(AssetSource('sounds/${preset.id}.wav'));
+      } catch (assetErr) {
+        debugPrint('Asset playback error: $assetErr, trying file synthesis...');
+        // 2. Fallback to temp file synthesis
+        final tempDir = await getTemporaryDirectory();
+        final soundFile = File('${tempDir.path}/alarmer_${preset.id}.wav');
+        if (!await soundFile.exists()) {
+          final wavBytes = _generateWavBytes(
+            freq1: preset.baseFreq,
+            freq2: preset.secondaryFreq,
+            durationSeconds: preset.durationSec,
+          );
+          await soundFile.writeAsBytes(wavBytes, flush: true);
+        }
+        await _player.play(DeviceFileSource(soundFile.path));
+      }
 
       _player.onPlayerComplete.listen((_) {
         _isPlaying = false;
         _currentlyPlayingId = null;
       });
     } catch (e) {
-      debugPrint('Error playing alert sound: $e');
+      debugPrint('Error in SoundManager: $e');
+      try {
+        await SystemSound.play(SystemSoundType.alert);
+      } catch (_) {}
       _isPlaying = false;
       _currentlyPlayingId = null;
     }
@@ -175,20 +196,20 @@ class SoundManager {
     _currentlyPlayingId = null;
   }
 
-  /// Synthesizes a valid 16-bit Mono WAV audio buffer in memory (Zero asset dependency)
+  /// Generates pristine CD-Quality (44.1kHz 16-bit Mono) WAV PCM Audio Buffer
   static Uint8List _generateWavBytes({
     required int freq1,
     required int freq2,
     required double durationSeconds,
-    int sampleRate = 22050,
+    int sampleRate = 44100,
   }) {
     final numSamples = (durationSeconds * sampleRate).toInt();
-    final dataSize = numSamples * 2; // 16-bit = 2 bytes per sample
+    final dataSize = numSamples * 2;
     final fileSize = 44 + dataSize;
 
     final buffer = ByteData(fileSize);
 
-    // RIFF header
+    // RIFF chunk descriptor
     buffer.setUint8(0, 0x52); // 'R'
     buffer.setUint8(1, 0x49); // 'I'
     buffer.setUint8(2, 0x46); // 'F'
@@ -199,37 +220,34 @@ class SoundManager {
     buffer.setUint8(10, 0x56); // 'V'
     buffer.setUint8(11, 0x45); // 'E'
 
-    // fmt subchunk
+    // 'fmt ' subchunk
     buffer.setUint8(12, 0x66); // 'f'
     buffer.setUint8(13, 0x6D); // 'm'
     buffer.setUint8(14, 0x74); // 't'
     buffer.setUint8(15, 0x20); // ' '
-    buffer.setUint32(16, 16, Endian.little); // Subchunk1Size
-    buffer.setUint16(20, 1, Endian.little);  // AudioFormat (PCM)
-    buffer.setUint16(22, 1, Endian.little);  // NumChannels (Mono)
-    buffer.setUint32(24, sampleRate, Endian.little); // SampleRate
-    buffer.setUint32(28, sampleRate * 2, Endian.little); // ByteRate
-    buffer.setUint16(32, 2, Endian.little);  // BlockAlign
-    buffer.setUint16(34, 16, Endian.little); // BitsPerSample
+    buffer.setUint32(16, 16, Endian.little);
+    buffer.setUint16(20, 1, Endian.little);
+    buffer.setUint16(22, 1, Endian.little);
+    buffer.setUint32(24, sampleRate, Endian.little);
+    buffer.setUint32(28, sampleRate * 2, Endian.little);
+    buffer.setUint16(32, 2, Endian.little);
+    buffer.setUint16(34, 16, Endian.little);
 
-    // data subchunk
+    // 'data' subchunk
     buffer.setUint8(36, 0x64); // 'd'
     buffer.setUint8(37, 0x61); // 'a'
     buffer.setUint8(38, 0x74); // 't'
     buffer.setUint8(39, 0x61); // 'a'
     buffer.setUint32(40, dataSize, Endian.little);
 
-    // Generate waveform with alternating frequencies & pulse envelope
     int offset = 44;
     for (int i = 0; i < numSamples; i++) {
       final t = i / sampleRate;
-      // Pulse modulation: alternate between freq1 and freq2 every 0.25 seconds
-      final currentFreq = ((t * 4).toInt() % 2 == 0) ? freq1 : freq2;
-      
-      // Envelope to avoid clicking
-      final env = (sin(pi * (i / numSamples)) * 0.9).clamp(0.0, 1.0);
-      final sample = (sin(2 * pi * currentFreq * t) * 32767 * env).toInt().clamp(-32768, 32767);
-
+      final currentFreq = ((t * 5).toInt() % 2 == 0) ? freq1 : freq2;
+      final wave = (sin(2 * pi * currentFreq * t) + 0.3 * sin(4 * pi * currentFreq * t)) / 1.3;
+      final pulsePhase = (t * 5) - (t * 5).floor();
+      final env = (sin(pi * pulsePhase)).clamp(0.0, 1.0);
+      final sample = (wave * 30000 * env).toInt().clamp(-32768, 32767);
       buffer.setInt16(offset, sample, Endian.little);
       offset += 2;
     }

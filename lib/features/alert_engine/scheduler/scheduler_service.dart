@@ -85,12 +85,19 @@ class SchedulerService {
       );
 
       if (result.isTriggered) {
-        // Dispatch Notification
+        // Dispatch Notification with custom note and custom sound
+        final finalBody = (rule.customNote != null && rule.customNote!.trim().isNotEmpty)
+            ? '${result.message}\n📝 ${rule.customNote!.trim()}'
+            : result.message;
+
         await _notificationService.showCriticalAlert(
           id: rule.uuid.hashCode,
           title: result.title,
-          body: result.message,
+          body: finalBody,
           payload: rule.uuid,
+          soundName: rule.customSound ?? 'alarm_siren',
+          soundEnabled: rule.soundEnabled,
+          vibrationEnabled: rule.vibrationEnabled,
         );
 
         // Save notification log
@@ -101,7 +108,7 @@ class SchedulerService {
             exchangeId: rule.exchangeId,
             marketSymbol: rule.marketSymbol,
             title: result.title,
-            message: result.message,
+            message: finalBody,
             triggeredPrice: ticker.lastPrice,
             timestamp: now,
           );

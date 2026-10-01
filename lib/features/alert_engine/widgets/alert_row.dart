@@ -130,9 +130,40 @@ class AlertRow extends StatelessWidget {
                 ),
               ),
 
+              if (rule.customNote != null && rule.customNote!.trim().isNotEmpty) ...[
+                const SizedBox(height: AppTokens.space6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.2)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.edit_note_rounded, size: 14, color: theme.colorScheme.primary),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          rule.customNote!.trim(),
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.primary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
               const SizedBox(height: AppTokens.space8),
 
-              // Metadata Row: Trigger count & last triggered
+              // Metadata Row: Trigger count & last triggered & Sound/Vibrate icons
               Row(
                 children: [
                   Text(
@@ -148,6 +179,17 @@ class AlertRow extends StatelessWidget {
                       style: TextStyle(fontSize: 11, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
                     ),
                   ],
+                  const Spacer(),
+                  if (rule.soundEnabled)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4),
+                      child: Icon(Icons.volume_up_rounded, size: 14, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                    ),
+                  if (rule.vibrationEnabled)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4),
+                      child: Icon(Icons.vibration_rounded, size: 14, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                    ),
                 ],
               ),
 

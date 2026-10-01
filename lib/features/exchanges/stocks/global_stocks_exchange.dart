@@ -6,7 +6,7 @@ import '../base/exchange_category.dart';
 import '../base/models/market_ticker.dart';
 import '../base/models/price_snapshot.dart';
 
-/// Comprehensive Global Stock Markets, Commodities, Forex, Macro & Top 100 Companies Adapter
+/// Comprehensive Global Stock Markets, Commodities, Forex, Crypto Macro & Top 100 Companies Adapter
 class GlobalStocksExchange implements Exchange {
   final http.Client _client;
 
@@ -17,7 +17,7 @@ class GlobalStocksExchange implements Exchange {
   String get id => 'global_stocks';
 
   @override
-  String get name => 'بازارهای جهانی و بورس (Top 100 Companies / China / Forex / Commodities)';
+  String get name => 'بازارهای جهانی، بورس و شاخص‌های کلان (Macro / Top 100 / Forex / Commodities)';
 
   @override
   ExchangeCategory get category => ExchangeCategory.all;
@@ -30,7 +30,67 @@ class GlobalStocksExchange implements Exchange {
 
   static const List<Map<String, dynamic>> predefinedStocks = [
     // =========================================================================
-    // 1. MACRO BENCHMARKS, YIELDS & DXY (اوراق قرضه، شاخص دلار و نوسان)
+    // 1. CRYPTO MACRO & DOMINANCE INDICES (شاخص‌های کلان کریپتو و دامیننس)
+    // =========================================================================
+    {
+      'symbol': 'TOTAL',
+      'name': 'Crypto Total Market Cap (TOTAL)',
+      'nameFa': 'شاخص کل ارزش بازار کریپتو (TOTAL)',
+      'cat': 'CryptoMacro',
+      'icon': '🌐',
+      'price': 2450.0, // Billion USD
+    },
+    {
+      'symbol': 'TOTAL2',
+      'name': 'Crypto Market Cap Excl. BTC (TOTAL2)',
+      'nameFa': 'شاخص بازار کریپتو منهای بیت‌کوین (TOTAL2)',
+      'cat': 'CryptoMacro',
+      'icon': '🔷',
+      'price': 1080.0, // Billion USD
+    },
+    {
+      'symbol': 'TOTAL3',
+      'name': 'Altcoin Market Cap Excl. BTC & ETH (TOTAL3)',
+      'nameFa': 'شاخص آلت‌کوین‌ها منهای بیت‌کوین و اتریوم (TOTAL3)',
+      'cat': 'CryptoMacro',
+      'icon': '🚀',
+      'price': 685.0, // Billion USD
+    },
+    {
+      'symbol': 'BTC.D',
+      'name': 'Bitcoin Dominance Index (BTC.D)',
+      'nameFa': 'شاخص دامیننس و سهم بازار بیت‌کوین (BTC.D %)',
+      'cat': 'CryptoMacro',
+      'icon': '₿',
+      'price': 58.60, // %
+    },
+    {
+      'symbol': 'USDT.D',
+      'name': 'Tether Dominance Index (USDT.D)',
+      'nameFa': 'شاخص دامیننس تتر و نقدینگی دلاری (USDT.D %)',
+      'cat': 'CryptoMacro',
+      'icon': '💵',
+      'price': 5.15, // %
+    },
+    {
+      'symbol': 'ETH.D',
+      'name': 'Ethereum Dominance Index (ETH.D)',
+      'nameFa': 'شاخص دامیننس و سهم بازار اتریوم (ETH.D %)',
+      'cat': 'CryptoMacro',
+      'icon': '⟠',
+      'price': 14.30, // %
+    },
+    {
+      'symbol': 'CRYPTO_FGI',
+      'name': 'Crypto Fear & Greed Index',
+      'nameFa': 'شاخص احساسات، ترس و طمع کریپتو (0-100)',
+      'cat': 'CryptoMacro',
+      'icon': '🧭',
+      'price': 68.0,
+    },
+
+    // =========================================================================
+    // 2. MACRO BENCHMARKS, YIELDS & DXY (اوراق قرضه، شاخص دلار و نوسان)
     // =========================================================================
     {
       'symbol': 'DX-Y.NYB',
@@ -82,7 +142,7 @@ class GlobalStocksExchange implements Exchange {
     },
 
     // =========================================================================
-    // 2. GLOBAL STOCK INDICES (شاخص‌های برتر بورس‌های جهان)
+    // 3. GLOBAL STOCK INDICES (شاخص‌های برتر بورس‌های جهان)
     // =========================================================================
     {
       'symbol': '^GSPC',
@@ -142,7 +202,7 @@ class GlobalStocksExchange implements Exchange {
     },
 
     // =========================================================================
-    // 3. CHINA & ASIAN BENCHMARKS & GIANTS (بازارها، شاخص‌ها و غول‌های چین و آسیا)
+    // 4. CHINA & ASIAN BENCHMARKS & GIANTS (بازارها، شاخص‌ها و غول‌های چین و آسیا)
     // =========================================================================
     {
       'symbol': '000001.SS',
@@ -266,7 +326,7 @@ class GlobalStocksExchange implements Exchange {
     },
 
     // =========================================================================
-    // 4. PRECIOUS METALS & COMMODITIES (طلا، نقره، نفت و فلزات صنعتی)
+    // 5. PRECIOUS METALS & COMMODITIES (طلا، نقره، نفت و فلزات صنعتی)
     // =========================================================================
     {
       'symbol': 'GC=F',
@@ -334,7 +394,7 @@ class GlobalStocksExchange implements Exchange {
     },
 
     // =========================================================================
-    // 5. FOREX MAJORS & CROSSES (فارکس و برابری ارزهای بین‌المللی)
+    // 6. FOREX MAJORS & CROSSES (فارکس و برابری ارزهای بین‌المللی)
     // =========================================================================
     {
       'symbol': 'EURUSD=X',
@@ -434,7 +494,7 @@ class GlobalStocksExchange implements Exchange {
     },
 
     // =========================================================================
-    // 6. THE 100 LARGEST COMPANIES BY MARKET CAP (CompaniesMarketCap.com 1-100)
+    // 7. THE 100 LARGEST COMPANIES BY MARKET CAP (CompaniesMarketCap.com 1-100)
     // =========================================================================
     {
       'symbol': 'NVDA',
@@ -1364,7 +1424,74 @@ class GlobalStocksExchange implements Exchange {
   Future<MarketTicker> fetchTicker(CurrencyPair pair) async {
     final cleanSymbol = pair.baseCurrency;
 
-    // 1. Try Yahoo Finance primary & secondary endpoints
+    // 1. Specialized Handler for Crypto Macro & Dominance Indices
+    if (cleanSymbol == 'TOTAL' ||
+        cleanSymbol == 'TOTAL2' ||
+        cleanSymbol == 'TOTAL3' ||
+        cleanSymbol == 'BTC.D' ||
+        cleanSymbol == 'USDT.D' ||
+        cleanSymbol == 'ETH.D') {
+      try {
+        final res = await _client.get(Uri.parse('https://api.coingecko.com/api/v3/global')).timeout(const Duration(seconds: 5));
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body)['data'];
+          if (data != null) {
+            final totalUsd = (data['total_market_cap']?['usd'] as num?)?.toDouble() ?? 2450000000000.0;
+            final marketCapPct = data['market_cap_percentage'] as Map<String, dynamic>? ?? {};
+            final btcPct = (marketCapPct['btc'] as num?)?.toDouble() ?? 58.6;
+            final ethPct = (marketCapPct['eth'] as num?)?.toDouble() ?? 14.3;
+            final usdtPct = (marketCapPct['usdt'] as num?)?.toDouble() ?? 5.15;
+
+            double targetValue = 0.0;
+            if (cleanSymbol == 'TOTAL') {
+              targetValue = totalUsd / 1e9; // in Billions USD
+            } else if (cleanSymbol == 'TOTAL2') {
+              targetValue = (totalUsd * (100 - btcPct) / 100) / 1e9;
+            } else if (cleanSymbol == 'TOTAL3') {
+              targetValue = (totalUsd * (100 - btcPct - ethPct) / 100) / 1e9;
+            } else if (cleanSymbol == 'BTC.D') {
+              targetValue = btcPct;
+            } else if (cleanSymbol == 'USDT.D') {
+              targetValue = usdtPct;
+            } else if (cleanSymbol == 'ETH.D') {
+              targetValue = ethPct;
+            }
+
+            if (targetValue > 0) {
+              return MarketTicker(
+                exchangeId: id,
+                pair: pair,
+                lastPrice: targetValue,
+                volume24h: 0.0,
+                timestamp: DateTime.now(),
+              );
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    if (cleanSymbol == 'CRYPTO_FGI') {
+      try {
+        final res = await _client.get(Uri.parse('https://api.alternative.me/fng/')).timeout(const Duration(seconds: 4));
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body);
+          final valStr = data['data']?[0]?['value'];
+          final val = double.tryParse(valStr?.toString() ?? '');
+          if (val != null && val > 0) {
+            return MarketTicker(
+              exchangeId: id,
+              pair: pair,
+              lastPrice: val,
+              volume24h: 0.0,
+              timestamp: DateTime.now(),
+            );
+          }
+        }
+      } catch (_) {}
+    }
+
+    // 2. Try Yahoo Finance primary & secondary endpoints for Stocks, Commodities & Forex
     final hosts = ['query1.finance.yahoo.com', 'query2.finance.yahoo.com'];
 
     for (final host in hosts) {
@@ -1401,7 +1528,7 @@ class GlobalStocksExchange implements Exchange {
       } catch (_) {}
     }
 
-    // 2. High-speed Stooq Financial Mirror (for Indices, Forex & Stocks)
+    // 3. High-speed Stooq Financial Mirror (for Indices, Forex & Stocks)
     try {
       final stooqSym = cleanSymbol.replaceAll('^', '').replaceAll('=X', '').toLowerCase();
       final stooqUrl = Uri.parse('https://stooq.com/q/l/?s=$stooqSym.us&f=sd2t2ohlcv&h&e=json');
@@ -1424,7 +1551,7 @@ class GlobalStocksExchange implements Exchange {
       }
     } catch (_) {}
 
-    // 3. Fallback to predefined baseline price if network is temporarily slow
+    // 4. Fallback to predefined baseline price if network is temporarily slow
     final match = predefinedStocks.firstWhere(
       (s) => (s['symbol'] as String).toUpperCase() == cleanSymbol.toUpperCase(),
       orElse: () => {},

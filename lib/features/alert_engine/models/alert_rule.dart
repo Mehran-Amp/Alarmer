@@ -5,7 +5,7 @@ import 'alert_type.dart';
 import 'trigger_mode.dart';
 
 /// Personal Price Alert Rule entity.
-/// Represents a single, dedicated condition with its own polling interval.
+/// Represents a single, dedicated condition with its own polling interval, sound, vibration & note.
 class AlertRule extends Equatable {
   /// Unique UUID string (primary business key)
   final String uuid;
@@ -60,6 +60,18 @@ class AlertRule extends Equatable {
 
   /// Baseline reference volume
   final double? baseVolume;
+
+  /// Custom note / trade thesis (e.g. "TP1 Hit - take profit", "Stop Loss")
+  final String? customNote;
+
+  /// Custom alarm sound tone ID for this specific alert
+  final String? customSound;
+
+  /// Whether sound is enabled for this alert
+  final bool soundEnabled;
+
+  /// Whether vibration is enabled for this alert
+  final bool vibrationEnabled;
 
   /// Whether this alert is actively checked by the scheduler
   final bool isActive;
@@ -128,10 +140,13 @@ class AlertRule extends Equatable {
       targetPrice ?? percent ?? deltaAbsolute ?? volumePercent;
 
   /// Alias returning checkIntervalSeconds
-  int get timeWindowSeconds => checkIntervalSeconds;
+  int get checkInterval => checkIntervalSeconds;
 
-  /// Kept for compatibility
-  LogicOperator? get logicOperator => null;
+  /// Alias returning lastCheckedPrice
+  double? get lastPrice => lastCheckedPrice;
+
+  /// Alias returning isActive
+  bool get isEnabled => isActive;
 
   const AlertRule({
     required this.uuid,
@@ -150,6 +165,10 @@ class AlertRule extends Equatable {
     this.basePrice,
     this.lastCheckedPrice,
     this.baseVolume,
+    this.customNote,
+    this.customSound,
+    this.soundEnabled = true,
+    this.vibrationEnabled = true,
     this.isActive = true,
     this.isTriggered = false,
     this.cooldownUntil,
@@ -172,6 +191,10 @@ class AlertRule extends Equatable {
     double? volumePercent,
     double? currentPrice,
     double? currentVolume,
+    String? customNote,
+    String? customSound,
+    bool soundEnabled = true,
+    bool vibrationEnabled = true,
     DateTime? cooldownUntil,
     int triggerCount = 0,
   }) {
@@ -196,6 +219,10 @@ class AlertRule extends Equatable {
       basePrice: currentPrice,
       lastCheckedPrice: currentPrice,
       baseVolume: currentVolume,
+      customNote: customNote,
+      customSound: customSound,
+      soundEnabled: soundEnabled,
+      vibrationEnabled: vibrationEnabled,
       isActive: true,
       isTriggered: false,
       cooldownUntil: cooldownUntil,
@@ -225,6 +252,10 @@ class AlertRule extends Equatable {
     double? percent,
     double? deltaAbsolute,
     double? volumePercent,
+    String? customNote,
+    String? customSound,
+    bool? soundEnabled,
+    bool? vibrationEnabled,
     bool? isActive,
     bool? isTriggered,
     DateTime? cooldownUntil,
@@ -249,6 +280,10 @@ class AlertRule extends Equatable {
       percent: percent ?? this.percent,
       deltaAbsolute: deltaAbsolute ?? this.deltaAbsolute,
       volumePercent: volumePercent ?? this.volumePercent,
+      customNote: customNote ?? this.customNote,
+      customSound: customSound ?? this.customSound,
+      soundEnabled: soundEnabled ?? this.soundEnabled,
+      vibrationEnabled: vibrationEnabled ?? this.vibrationEnabled,
       basePrice: basePrice ?? this.basePrice,
       lastCheckedPrice: lastCheckedPrice ?? this.lastCheckedPrice,
       baseVolume: baseVolume ?? this.baseVolume,
@@ -279,6 +314,10 @@ class AlertRule extends Equatable {
         'basePrice': basePrice,
         'lastCheckedPrice': lastCheckedPrice,
         'baseVolume': baseVolume,
+        'customNote': customNote,
+        'customSound': customSound,
+        'soundEnabled': soundEnabled,
+        'vibrationEnabled': vibrationEnabled,
         'isActive': isActive,
         'isTriggered': isTriggered,
         'cooldownUntil': cooldownUntil?.toIso8601String(),
@@ -306,19 +345,23 @@ class AlertRule extends Equatable {
         deltaAbsolute: (json['deltaAbsolute'] as num?)?.toDouble(),
         volumePercent: (json['volumePercent'] as num?)?.toDouble(),
         basePrice: (json['basePrice'] as num?)?.toDouble(),
-        lastCheckedPrice: (json['lastCheckedPrice'] as num?)?.toDouble() ?? (json['basePrice'] as num?)?.toDouble(),
+        lastCheckedPrice: (json['lastCheckedPrice'] as num?)?.toDouble(),
         baseVolume: (json['baseVolume'] as num?)?.toDouble(),
+        customNote: json['customNote'] as String?,
+        customSound: json['customSound'] as String?,
+        soundEnabled: json['soundEnabled'] as bool? ?? true,
+        vibrationEnabled: json['vibrationEnabled'] as bool? ?? true,
         isActive: json['isActive'] as bool? ?? true,
         isTriggered: json['isTriggered'] as bool? ?? false,
         cooldownUntil: json['cooldownUntil'] != null
-            ? DateTime.parse(json['cooldownUntil'] as String)
+            ? DateTime.tryParse(json['cooldownUntil'] as String)
             : null,
         triggerCount: json['triggerCount'] as int? ?? 0,
         lastCheckedAt: json['lastCheckedAt'] != null
-            ? DateTime.parse(json['lastCheckedAt'] as String)
+            ? DateTime.tryParse(json['lastCheckedAt'] as String)
             : null,
         lastTriggeredAt: json['lastTriggeredAt'] != null
-            ? DateTime.parse(json['lastTriggeredAt'] as String)
+            ? DateTime.tryParse(json['lastTriggeredAt'] as String)
             : null,
         createdAt: json['createdAt'] != null
             ? DateTime.parse(json['createdAt'] as String)
@@ -343,6 +386,10 @@ class AlertRule extends Equatable {
         basePrice,
         lastCheckedPrice,
         baseVolume,
+        customNote,
+        customSound,
+        soundEnabled,
+        vibrationEnabled,
         isActive,
         isTriggered,
         cooldownUntil,

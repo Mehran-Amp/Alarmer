@@ -13,6 +13,7 @@ import '../../exchanges/base/exchange_category.dart';
 import '../../exchanges/registry/exchange_registry.dart';
 import '../../exchanges/stocks/global_stocks_exchange.dart';
 import '../../settings/services/settings_service.dart';
+import '../../settings/services/sound_manager.dart';
 
 enum CheckUnit { seconds, minutes, hours }
 
@@ -87,6 +88,12 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
   late final TextEditingController _percentController;
   late final TextEditingController _targetPriceController;
 
+  // Custom Notification, Sound & Note
+  late final TextEditingController _customNoteController;
+  String _selectedSound = 'alarm_siren';
+  bool _soundEnabled = true;
+  bool _vibrationEnabled = true;
+
   @override
   void initState() {
     super.initState();
@@ -96,6 +103,10 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
       _conditionType = rule.conditionType;
       _direction = rule.direction;
       _currentPrice = rule.currentDisplayPrice;
+      _selectedSound = rule.customSound ?? 'alarm_siren';
+      _soundEnabled = rule.soundEnabled;
+      _vibrationEnabled = rule.vibrationEnabled;
+      _customNoteController = TextEditingController(text: rule.customNote ?? '');
 
       // Determine Interval Unit and Value
       final secs = rule.checkIntervalSeconds;
@@ -141,6 +152,10 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
       _unitValueController = TextEditingController(text: '1');
       _percentController = TextEditingController(text: '2.5');
       _targetPriceController = TextEditingController();
+      _customNoteController = TextEditingController();
+      _selectedSound = 'alarm_siren';
+      _soundEnabled = true;
+      _vibrationEnabled = true;
     }
   }
 
@@ -149,6 +164,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
     _unitValueController.dispose();
     _percentController.dispose();
     _targetPriceController.dispose();
+    _customNoteController.dispose();
     super.dispose();
   }
 
@@ -351,6 +367,10 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
       }
     }
 
+    final customNote = _customNoteController.text.trim().isNotEmpty
+        ? _customNoteController.text.trim()
+        : null;
+
     if (widget.initialRule != null) {
       final updatedRule = widget.initialRule!.copyWith(
         baseCurrency: pair.baseCurrency,
@@ -362,6 +382,10 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
         direction: _direction,
         percent: percent,
         targetPrice: targetPrice,
+        customNote: customNote,
+        customSound: _selectedSound,
+        soundEnabled: _soundEnabled,
+        vibrationEnabled: _vibrationEnabled,
         basePrice: _currentPrice ?? widget.initialRule!.basePrice,
         lastCheckedPrice: _currentPrice ?? widget.initialRule!.lastCheckedPrice,
       );
@@ -375,6 +399,10 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
         direction: _direction,
         percent: percent,
         targetPrice: targetPrice,
+        customNote: customNote,
+        customSound: _selectedSound,
+        soundEnabled: _soundEnabled,
+        vibrationEnabled: _vibrationEnabled,
         currentPrice: _currentPrice,
       );
       await widget.repository.saveRule(newRule);
@@ -969,6 +997,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
           child: Row(
             children: [
               _buildMacroChip(isFa ? '🌐 همه نمادها' : 'All', 'all', theme),
+              _buildMacroChip(isFa ? '🪙 شاخص‌های کلان کریپتو و دامیننس' : 'Crypto Macro & Dominance', 'CryptoMacro', theme),
               _buildMacroChip(isFa ? '🇨🇳 بازارهای چین و آسیا' : 'China & Asia', 'China', theme),
               _buildMacroChip(isFa ? '🏆 ۱۰۰ شرکت برتر جهان' : 'Top 100 Global', 'Top100', theme),
               _buildMacroChip(isFa ? '🏛️ اوراق و شاخص دلار' : 'Macro & DXY', 'Macro', theme),
@@ -1440,7 +1469,147 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
           ),
         ],
 
-        const SizedBox(height: 28),
+        const SizedBox(height: 20),
+
+        // 3. CUSTOM NOTIFICATION, SOUND & NOTE SECTION
+        Text(
+          isFa ? 'تنظیمات صدا، ویبره و متن پیام اعلان' : 'Notification, Sound & Note',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: theme.colorScheme.onSurface),
+        ),
+        const SizedBox(height: 8),
+
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: theme.dividerColor),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 3.1 Custom Note / Message TextField
+              TextField(
+                controller: _customNoteController,
+                style: TextStyle(fontSize: 13, color: theme.colorScheme.onSurface),
+                decoration: InputDecoration(
+                  labelText: isFa ? 'متن / یادداشت اختصاصی هنگام آلارم' : 'Custom Alert Note / Message',
+                  hintText: isFa ? 'مثلاً: تارگت ۱ رسید - ۵۰٪ سیو سود کن!' : 'e.g. Target 1 reached - Take profit!',
+                  prefixIcon: Icon(Icons.edit_note_rounded, size: 22, color: theme.colorScheme.primary),
+                  filled: true,
+                  fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: theme.dividerColor)),
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // 3.2 Sound Selection Tile with Audition
+              Builder(builder: (context) {
+                final currentPreset = SoundManager.presets.firstWhere(
+                  (p) => p.id == _selectedSound,
+                  orElse: () => SoundManager.presets.first,
+                );
+                final soundTitle = isFa ? currentPreset.titleFa : currentPreset.titleEn;
+                final isPlaying = SoundManager().isSoundPlaying(currentPreset.id);
+
+                return InkWell(
+                  onTap: () => _showSoundPickerModal(context, theme, lang),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.06),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.25)),
+                    ),
+                    child: Row(
+                      children: [
+                        Text(currentPreset.icon, style: const TextStyle(fontSize: 22)),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                isFa ? 'آهنگ زنگ این آلارم' : 'Alert Sound',
+                                style: TextStyle(fontSize: 10, color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
+                              ),
+                              Text(
+                                soundTitle,
+                                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.primary),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            isPlaying ? Icons.stop_circle_rounded : Icons.play_circle_filled_rounded,
+                            color: isPlaying ? AppTokens.negative : theme.colorScheme.primary,
+                            size: 26,
+                          ),
+                          onPressed: () async {
+                            if (isPlaying) {
+                              await SoundManager().stop();
+                            } else {
+                              await SoundManager().playPreset(currentPreset.id);
+                            }
+                            setState(() {});
+                          },
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            isFa ? 'انتخاب' : 'Choose',
+                            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+              const SizedBox(height: 8),
+
+              // 3.3 Sound & Vibration Toggles
+              Row(
+                children: [
+                  Expanded(
+                    child: SwitchListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        isFa ? 'پخش صدا' : 'Play Sound',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                      ),
+                      value: _soundEnabled,
+                      activeColor: theme.colorScheme.primary,
+                      onChanged: (val) => setState(() => _soundEnabled = val),
+                    ),
+                  ),
+                  Expanded(
+                    child: SwitchListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      title: Text(
+                        isFa ? 'ویبره گوشی' : 'Vibrate',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface),
+                      ),
+                      value: _vibrationEnabled,
+                      activeColor: theme.colorScheme.primary,
+                      onChanged: (val) => setState(() => _vibrationEnabled = val),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 24),
 
         SizedBox(
           width: double.infinity,
@@ -1460,6 +1629,137 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
         ),
       ],
     );
+  }
+
+  void _showSoundPickerModal(BuildContext context, ThemeData theme, String lang) {
+    final isFa = lang == 'fa' || lang == 'ar' || lang == 'ckb';
+    final isRtl = AppStrings.isRtl(lang);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: theme.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Directionality(
+          textDirection: isRtl ? TextDirection.rtl : TextDirection.ltr,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.music_note_rounded, size: 22),
+                        const SizedBox(width: 8),
+                        Text(
+                          isFa ? 'انتخاب آهنگ زنگ آلارم' : 'Select Alert Sound',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.close_rounded, color: theme.colorScheme.onSurface.withValues(alpha: 0.5)),
+                      onPressed: () {
+                        SoundManager().stop();
+                        Navigator.pop(ctx);
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: ListView.separated(
+                    itemCount: SoundManager.presets.length,
+                    separatorBuilder: (_, __) => Divider(height: 1, color: theme.dividerColor),
+                    itemBuilder: (context, index) {
+                      final preset = SoundManager.presets[index];
+                      final isSelected = _selectedSound == preset.id;
+                      final isPlaying = SoundManager().isSoundPlaying(preset.id);
+                      final title = isFa ? preset.titleFa : preset.titleEn;
+
+                      return Material(
+                        color: Colors.transparent,
+                        child: ListTile(
+                          leading: Text(preset.icon, style: const TextStyle(fontSize: 22)),
+                          title: Text(
+                            title,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                              color: isSelected ? theme.colorScheme.primary : theme.colorScheme.onSurface,
+                            ),
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: Icon(
+                                  isPlaying ? Icons.stop_circle_rounded : Icons.play_circle_filled_rounded,
+                                  color: isPlaying ? AppTokens.negative : theme.colorScheme.primary,
+                                  size: 28,
+                                ),
+                                onPressed: () async {
+                                  if (isPlaying) {
+                                    await SoundManager().stop();
+                                  } else {
+                                    await SoundManager().playPreset(preset.id);
+                                  }
+                                  setModalState(() {});
+                                },
+                              ),
+                              if (isSelected)
+                                Icon(Icons.check_circle_rounded, color: theme.colorScheme.primary, size: 22),
+                            ],
+                          ),
+                          selected: isSelected,
+                          selectedTileColor: theme.colorScheme.primary.withValues(alpha: 0.08),
+                          onTap: () async {
+                            await SoundManager().playPreset(preset.id);
+                            setState(() {
+                              _selectedSound = preset.id;
+                            });
+                            setModalState(() {});
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      SoundManager().stop();
+                      Navigator.pop(ctx);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.colorScheme.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: Text(isFa ? 'تأیید و ذخیره صدا' : 'Confirm Sound', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ).whenComplete(() {
+      SoundManager().stop();
+    });
   }
 
   Widget _buildDirectionChip(String label, AlertDirection dir, ThemeData theme) {
