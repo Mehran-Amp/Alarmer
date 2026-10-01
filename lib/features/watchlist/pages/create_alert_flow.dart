@@ -928,7 +928,13 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
     final isFa = lang == 'fa' || lang == 'ar' || lang == 'ckb';
     final filtered = allAssets.where((a) {
       if (_macroCategoryFilter != 'all') {
-        if (a['cat'] != _macroCategoryFilter) return false;
+        if (_macroCategoryFilter == 'Top100') {
+          if (a['cat'] != 'Top100' && a['isTop100'] != true) return false;
+        } else if (_macroCategoryFilter == 'China') {
+          if (a['cat'] != 'China') return false;
+        } else if (a['cat'] != _macroCategoryFilter) {
+          return false;
+        }
       }
       final q = _macroSearchQuery.trim().toLowerCase();
       if (q.isEmpty) return true;
