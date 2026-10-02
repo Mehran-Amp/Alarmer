@@ -309,7 +309,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
     await notifService.showCriticalAlert(
       id: 99999,
-      title: '🟢 BTC/USDT +3.52% Live Price ▲',
+      title: '🟢 BTC/USDT +3.52% \$87,420.00 ▲',
       body: '📝 ${AppStrings.get('test_alert_body', lang)}',
       soundName: settingsService.settings.soundName,
       volume: settingsService.settings.alarmVolume,

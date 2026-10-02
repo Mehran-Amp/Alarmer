@@ -388,7 +388,7 @@ export default function App() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([
     {
       id: 'notif-1',
-      title: '🟢 BTC/USDT +3.52% Live Price ▲',
+      title: '🟢 BTC/USDT +3.52% $83,770.00 ▲',
       body: '📝 Target reached on Binance',
       timestamp: new Date(Date.now() - 90000),
       ruleUuid: 'rule-btc-crypto',
@@ -398,7 +398,7 @@ export default function App() {
     },
     {
       id: 'notif-2',
-      title: '🔴 ETH/USDT -3.52% Live Price ▼',
+      title: '🔴 ETH/USDT -3.52% $3,120.00 ▼',
       body: '📝 Support level broken',
       timestamp: new Date(Date.now() - 180000),
       ruleUuid: 'rule-eth-crypto',
@@ -564,26 +564,28 @@ export default function App() {
         const emoji = isUpward ? '🟢' : '🔴';
         const arrow = isUpward ? '▲' : '▼';
         const sign = isUpward ? '+' : '-';
-        title = `${emoji} ${rule.marketSymbol} ${sign}${Math.abs(actualPercent).toFixed(2)}% Live Price ${arrow}`;
+        const priceStr = `${unit}${newPrice.toLocaleString(undefined, { minimumFractionDigits: newPrice < 1 ? 4 : 2, maximumFractionDigits: 4 })}`;
+        title = `${emoji} ${rule.marketSymbol} ${sign}${Math.abs(actualPercent).toFixed(2)}% ${priceStr} ${arrow}`;
         body = rule.customNote && rule.customNote.trim() 
           ? (rule.customNote.startsWith('📝') ? rule.customNote : `📝 ${rule.customNote}`)
-          : `📝 Live Price: ${unit}${newPrice.toLocaleString()}`;
+          : `📝 ${priceStr}`;
       }
     } else if (rule.conditionType === 'PRICE_THRESHOLD') {
+      const priceStr = `${unit}${newPrice.toLocaleString(undefined, { minimumFractionDigits: newPrice < 1 ? 4 : 2, maximumFractionDigits: 4 })}`;
       if (rule.direction === 'ABOVE' && newPrice >= rule.targetValue) {
         triggered = true;
         const pct = ((newPrice - rule.basePrice) / rule.basePrice) * 100;
-        title = `🟢 ${rule.marketSymbol} +${Math.abs(pct).toFixed(2)}% Live Price ▲`;
+        title = `🟢 ${rule.marketSymbol} +${Math.abs(pct).toFixed(2)}% ${priceStr} ▲`;
         body = rule.customNote && rule.customNote.trim() 
           ? (rule.customNote.startsWith('📝') ? rule.customNote : `📝 ${rule.customNote}`)
-          : `📝 Live Price: ${unit}${newPrice.toLocaleString()}`;
+          : `📝 ${priceStr}`;
       } else if (rule.direction === 'BELOW' && newPrice <= rule.targetValue) {
         triggered = true;
         const pct = ((newPrice - rule.basePrice) / rule.basePrice) * 100;
-        title = `🔴 ${rule.marketSymbol} -${Math.abs(pct).toFixed(2)}% Live Price ▼`;
+        title = `🔴 ${rule.marketSymbol} -${Math.abs(pct).toFixed(2)}% ${priceStr} ▼`;
         body = rule.customNote && rule.customNote.trim() 
           ? (rule.customNote.startsWith('📝') ? rule.customNote : `📝 ${rule.customNote}`)
-          : `📝 Live Price: ${unit}${newPrice.toLocaleString()}`;
+          : `📝 ${priceStr}`;
       }
     }
 

@@ -1,3 +1,4 @@
+import '../../core/utils/format_utils.dart';
 import '../models/alert_rule.dart';
 import '../models/trigger_mode.dart';
 
@@ -44,14 +45,8 @@ abstract class ConditionEvaluator {
     }
   }
 
-  static String _formatVal(double val) {
-    if (val.abs() >= 1000) {
-      return val.toStringAsFixed(2);
-    } else if (val.abs() >= 1) {
-      return val.toStringAsFixed(val < 10 ? 3 : 2);
-    } else {
-      return val.toStringAsFixed(val < 0.01 ? 6 : 4);
-    }
+  static String _formatVal(double val, {String? currencySymbol}) {
+    return FormatUtils.formatPrice(val, currencySymbol: currencySymbol);
   }
 
   static String _buildBodyText(AlertRule rule, double currentPrice) {
@@ -62,7 +57,7 @@ abstract class ConditionEvaluator {
       }
       return '📝 $customNote';
     }
-    return '📝 Live Price: \$${_formatVal(currentPrice)}';
+    return '📝 ${_formatVal(currentPrice, currencySymbol: rule.pair.counterCurrency)}';
   }
 
   /// 1. Price Threshold (One-shot):
@@ -109,10 +104,11 @@ abstract class ConditionEvaluator {
     final arrow = isUpward ? '▲' : '▼';
     final sign = isUpward ? '+' : '-';
     final pctStr = '$sign${percentDiff.abs().toStringAsFixed(2)}%';
+    final formattedPrice = _formatVal(currentPrice, currencySymbol: rule.pair.counterCurrency);
 
     return EvaluationResult(
       isTriggered: true,
-      title: '$emoji ${rule.pair.displayName} $pctStr Live Price $arrow',
+      title: '$emoji ${rule.pair.displayName} $pctStr $formattedPrice $arrow',
       message: _buildBodyText(rule, currentPrice),
       newIsActive: false,     // One-shot: deactivates
       newIsTriggered: true,   // Marked as triggered in UI
@@ -148,10 +144,11 @@ abstract class ConditionEvaluator {
     final arrow = isUpward ? '▲' : '▼';
     final sign = isUpward ? '+' : '-';
     final pctStr = '$sign${actualPercent.abs().toStringAsFixed(2)}%';
+    final formattedPrice = _formatVal(currentPrice, currencySymbol: rule.pair.counterCurrency);
 
     return EvaluationResult(
       isTriggered: true,
-      title: '$emoji ${rule.pair.displayName} $pctStr Live Price $arrow',
+      title: '$emoji ${rule.pair.displayName} $pctStr $formattedPrice $arrow',
       message: _buildBodyText(rule, currentPrice),
       newBasePrice: currentPrice, // Update baseline for next cycle to latest price!
       newIsActive: true,          // Stays active forever until paused
@@ -187,10 +184,11 @@ abstract class ConditionEvaluator {
     final arrow = isUpward ? '▲' : '▼';
     final sign = isUpward ? '+' : '-';
     final pctStr = '$sign${actualPercent.abs().toStringAsFixed(2)}%';
+    final formattedPrice = _formatVal(currentPrice, currencySymbol: rule.pair.counterCurrency);
 
     return EvaluationResult(
       isTriggered: true,
-      title: '$emoji ${rule.pair.displayName} $pctStr Live Price $arrow',
+      title: '$emoji ${rule.pair.displayName} $pctStr $formattedPrice $arrow',
       message: _buildBodyText(rule, currentPrice),
       newBasePrice: currentPrice,
       newIsActive: true,
@@ -218,11 +216,13 @@ abstract class ConditionEvaluator {
       final arrow = isUpward ? '▲' : '▼';
       final sign = isUpward ? '+' : '-';
       final pctStr = '$sign${actualPercent.abs().toStringAsFixed(2)}%';
+      final currentPrice = rule.lastCheckedPrice ?? 0.0;
+      final formattedPrice = _formatVal(currentPrice, currencySymbol: rule.pair.counterCurrency);
 
       return EvaluationResult(
         isTriggered: true,
-        title: '$emoji ${rule.pair.displayName} $pctStr Live Price $arrow',
-        message: _buildBodyText(rule, rule.lastCheckedPrice ?? 0.0),
+        title: '$emoji ${rule.pair.displayName} $pctStr $formattedPrice $arrow',
+        message: _buildBodyText(rule, currentPrice),
         newBaseVolume: currentVolume,
         newIsActive: true,
         newIsTriggered: false,
