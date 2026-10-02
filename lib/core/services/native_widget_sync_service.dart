@@ -2,34 +2,41 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import '../../features/alert_engine/models/alert_rule.dart';
 import '../../features/alert_engine/models/trigger_mode.dart';
+import '../../features/settings/models/app_settings.dart';
 import '../utils/format_utils.dart';
 
-/// Service that serializes active and recent alerts to the Native Android Home Screen Widget.
+/// Service that serializes active alerts and active app theme to the Native Android Home Screen Widget.
+/// - Preserves exact alert order from app
+/// - Always in English
+/// - No notes/info lines
+/// - No percentage change (displays condition target or status directly)
+/// - Synchronizes widget colors with selected app theme palette dynamically
 class NativeWidgetSyncService {
   static const _channel = MethodChannel('com.example.bitcoin_checker/app_lifecycle');
 
-  /// Sync list of rules to native Android AppWidget
-  static Future<void> syncAlerts(List<AlertRule> rules, {String lang = 'fa'}) async {
-    try {
-      final isFa = lang == 'fa' || lang == 'ar' || lang == 'ckb';
-      
-      // Sort rules: Active first, then most recently updated
-      final sorted = List<AlertRule>.from(rules)
-        ..sort((a, b) {
-          if (a.isActive != b.isActive) return a.isActive ? -1 : 1;
-          final aTime = a.lastCheckedAt ?? a.createdAt;
-          final bTime = b.lastCheckedAt ?? b.createdAt;
-          return bTime.compareTo(aTime);
-        });
+  static List<AlertRule> _cachedRules = [];
+  static AppThemePalette _cachedPalette = AppThemePalette.darkGreen;
 
-      final items = sorted.take(6).map((rule) {
+  /// Sync list of rules (with optional theme palette) to native Android AppWidget
+  static Future<void> syncAlerts(
+    List<AlertRule> rules, {
+    AppThemePalette? themePalette,
+  }) async {
+    try {
+      _cachedRules = rules;
+      if (themePalette != null) {
+        _cachedPalette = themePalette;
+      }
+
+      // Preserve exact order from app alerts list
+      final items = rules.take(5).map((rule) {
         final symbol = rule.pair.displayName;
         final currentPrice = rule.lastCheckedPrice ?? rule.basePrice ?? 0.0;
         final formattedPrice = currentPrice > 0
             ? FormatUtils.formatPrice(currentPrice, currencySymbol: rule.pair.counterCurrency)
             : '—';
 
-        // Check if one-shot condition is fulfilled / done (non-percentage)
+        // Check if one-shot condition is fulfilled / done
         final isOneShot = rule.conditionType == AlertConditionType.priceThreshold;
         final isDone = isOneShot && (!rule.isActive || rule.isTriggered);
 
@@ -37,72 +44,34 @@ class NativeWidgetSyncService {
         bool? isPositive;
 
         if (isDone) {
-          badgeText = isFa ? '✔️ انجام شد' : '✔️ Done';
+          badgeText = '✔️ Done';
           isPositive = true;
         } else {
           switch (rule.conditionType) {
-            case AlertConditionType.percentChange:
-              final base = rule.basePrice ?? currentPrice;
-              if (base > 0 && currentPrice > 0) {
-                final diffPct = ((currentPrice - base) / base) * 100.0;
-                final isUp = diffPct >= 0;
-                isPositive = isUp;
-                final sign = isUp ? '+' : '';
-                final arrow = isUp ? '▲' : '▼';
-                badgeText = '$sign${diffPct.toStringAsFixed(2)}% $arrow';
-              } else {
-                final isUp = rule.direction == AlertDirection.above;
-                isPositive = isUp;
-                final arrow = isUp ? '▲' : '▼';
-                badgeText = '±${rule.percent?.toStringAsFixed(1)}% $arrow';
-              }
-              break;
-
             case AlertConditionType.priceThreshold:
               final target = rule.targetPrice ?? 0.0;
-              if (target > 0 && currentPrice > 0) {
-                final diffPct = ((currentPrice - target) / target) * 100.0;
-                final isUp = currentPrice >= target;
-                isPositive = isUp;
-                final sign = diffPct >= 0 ? '+' : '';
-                final arrow = isUp ? '▲' : '▼';
-                badgeText = '$sign${diffPct.toStringAsFixed(2)}% $arrow';
-              } else {
-                final isUp = rule.direction == AlertDirection.above;
-                isPositive = isUp;
-                final arrow = isUp ? '▲' : '▼';
-                badgeText = 'Target ${FormatUtils.formatPrice(target, currencySymbol: rule.pair.counterCurrency)} $arrow';
-              }
+              final isUp = rule.direction == AlertDirection.above;
+              isPositive = isUp;
+              badgeText = '${isUp ? '≥' : '≤'} ${FormatUtils.formatPrice(target, currencySymbol: rule.pair.counterCurrency)}';
+              break;
+
+            case AlertConditionType.percentChange:
+              final isUp = rule.direction == AlertDirection.above;
+              isPositive = isUp;
+              badgeText = '${isUp ? '▲' : '▼'} Step';
               break;
 
             case AlertConditionType.absolutePriceChange:
-              final base = rule.basePrice ?? currentPrice;
-              final diff = currentPrice - base;
-              final isUp = diff >= 0;
+              final isUp = rule.direction == AlertDirection.above;
               isPositive = isUp;
-              final sign = isUp ? '+' : '-';
-              final arrow = isUp ? '▲' : '▼';
-              badgeText = '$sign${FormatUtils.formatPrice(diff.abs(), currencySymbol: rule.pair.counterCurrency)} $arrow';
+              badgeText = '${isUp ? '▲' : '▼'} Move';
               break;
 
             case AlertConditionType.volumeChange:
-              final isUp = rule.direction == AlertDirection.above;
-              isPositive = isUp;
-              badgeText = 'Vol ${rule.volumePercent}%';
+              isPositive = rule.direction == AlertDirection.above;
+              badgeText = 'Vol';
               break;
           }
-        }
-
-        // Target / Note information (no exchange name)
-        String infoText = '';
-        if (rule.customNote != null && rule.customNote!.trim().isNotEmpty) {
-          infoText = rule.customNote!.trim();
-        } else if (rule.targetPrice != null && rule.targetPrice! > 0) {
-          infoText = '${isFa ? 'هدف' : 'Target'}: ${FormatUtils.formatPrice(rule.targetPrice!, currencySymbol: rule.pair.counterCurrency)}';
-        } else if (rule.percent != null) {
-          infoText = '${isFa ? 'تغییر' : 'Step'}: ±${rule.percent}%';
-        } else {
-          infoText = isFa ? 'هشدار فعال' : 'Active Alert';
         }
 
         return {
@@ -112,15 +81,18 @@ class NativeWidgetSyncService {
           'isPositive': isPositive == true,
           'isNegative': isPositive == false,
           'isDone': isDone,
-          'info': infoText,
           'isActive': rule.isActive,
         };
       }).toList();
 
       final activeCount = rules.where((r) => r.isActive).length;
+      final themeColors = _getPaletteColors(_cachedPalette);
+
       final payload = {
         'activeCount': activeCount,
-        'title': isFa ? 'هشدارهای زنده' : 'Live Alerts',
+        'title': 'Alarmer Live',
+        'footerText': 'Tap to open Alarmer',
+        'theme': themeColors,
         'items': items,
       };
 
@@ -128,7 +100,78 @@ class NativeWidgetSyncService {
         'json': jsonEncode(payload),
       });
     } catch (_) {
-      // Ignore background or platform channel exceptions gracefully
+      // Ignore platform channel exceptions gracefully
+    }
+  }
+
+  /// Sync theme palette change directly to Android AppWidget
+  static Future<void> syncTheme(AppThemePalette palette) async {
+    _cachedPalette = palette;
+    await syncAlerts(_cachedRules, themePalette: palette);
+  }
+
+  static Map<String, int> _getPaletteColors(AppThemePalette palette) {
+    switch (palette) {
+      case AppThemePalette.darkGreen:
+        return {
+          'bg': 0xFF090D16,
+          'surface': 0xFF111827,
+          'primary': 0xFF10B981,
+          'textPrimary': 0xFFF9FAFB,
+          'textSecondary': 0xFF9CA3AF,
+          'border': 0xFF374151,
+          'isDark': 1,
+        };
+      case AppThemePalette.lightGreen:
+        return {
+          'bg': 0xFFF3F4F6,
+          'surface': 0xFFFFFFFF,
+          'primary': 0xFF059669,
+          'textPrimary': 0xFF111827,
+          'textSecondary': 0xFF4B5563,
+          'border': 0xFFD1D5DB,
+          'isDark': 0,
+        };
+      case AppThemePalette.darkOrange:
+        return {
+          'bg': 0xFF0C0A09,
+          'surface': 0xFF1C1917,
+          'primary': 0xFFF97316,
+          'textPrimary': 0xFFFAFAF9,
+          'textSecondary': 0xFFA8A29E,
+          'border': 0xFF44403C,
+          'isDark': 1,
+        };
+      case AppThemePalette.lightOrange:
+        return {
+          'bg': 0xFFFAF8F5,
+          'surface': 0xFFFFFFFF,
+          'primary': 0xFFEA580C,
+          'textPrimary': 0xFF1C1917,
+          'textSecondary': 0xFF78716C,
+          'border': 0xFFE7E5E4,
+          'isDark': 0,
+        };
+      case AppThemePalette.darkPurpleBlue:
+        return {
+          'bg': 0xFF0B0D1B,
+          'surface': 0xFF13172E,
+          'primary': 0xFF8B5CF6,
+          'textPrimary': 0xFFF8FAFC,
+          'textSecondary': 0xFF94A3B8,
+          'border': 0xFF2E365E,
+          'isDark': 1,
+        };
+      case AppThemePalette.lightPurpleBlue:
+        return {
+          'bg': 0xFFF5F6FF,
+          'surface': 0xFFFFFFFF,
+          'primary': 0xFF7C3AED,
+          'textPrimary': 0xFF0F172A,
+          'textSecondary': 0xFF475569,
+          'border': 0xFFD6DBF5,
+          'isDark': 0,
+        };
     }
   }
 }

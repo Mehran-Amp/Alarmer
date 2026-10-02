@@ -9,6 +9,7 @@
 
     <!-- Top Header Bar -->
     <LinearLayout
+        android:id="@+id/widget_header_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
@@ -16,6 +17,7 @@
         android:paddingBottom="8dp">
 
         <ImageView
+            android:id="@+id/widget_logo_icon"
             android:layout_width="20dp"
             android:layout_height="20dp"
             android:src="@mipmap/ic_launcher" />
@@ -44,17 +46,18 @@
             android:paddingEnd="8dp"
             android:paddingBottom="2dp"
             android:text="⚡ 0 Active"
-            android:textColor="#58A6FF"
+            android:textColor="#10B981"
             android:textSize="10sp"
             android:textStyle="bold" />
     </LinearLayout>
 
     <FrameLayout
+        android:id="@+id/widget_divider_1"
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="#21262D" />
 
-    <!-- List of Alert Rows -->
+    <!-- List of Alert Rows (Compact, Clean, No notes line) -->
     <LinearLayout
         android:id="@+id/widget_items_container"
         android:layout_width="match_parent"
@@ -68,65 +71,48 @@
             android:id="@+id/item_1_root"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingTop="5dp"
-            android:paddingBottom="5dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
             android:visibility="visible">
 
-            <LinearLayout
-                android:layout_width="match_parent"
+            <TextView
+                android:id="@+id/item_1_symbol"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:id="@+id/item_1_symbol"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="BTC/USDT"
-                    android:textColor="#FFFFFF"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/item_1_price"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginLeft="8dp"
-                    android:layout_marginStart="8dp"
-                    android:layout_weight="1"
-                    android:text="$87,420.00"
-                    android:textColor="#F59E0B"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/item_1_badge"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/widget_badge_bg"
-                    android:paddingLeft="6dp"
-                    android:paddingStart="6dp"
-                    android:paddingTop="2dp"
-                    android:paddingRight="6dp"
-                    android:paddingEnd="6dp"
-                    android:paddingBottom="2dp"
-                    android:text="+2.50% ▲"
-                    android:textColor="#3FB950"
-                    android:textSize="10sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
+                android:text="BTC/USDT"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/item_1_info"
-                android:layout_width="match_parent"
+                android:id="@+id/item_1_price"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="1dp"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:text="Target: $90,000"
-                android:textColor="#8B949E"
-                android:textSize="10sp" />
+                android:layout_marginLeft="8dp"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="$87,420.00"
+                android:textColor="#F59E0B"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/item_1_badge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/widget_badge_bg"
+                android:paddingLeft="6dp"
+                android:paddingStart="6dp"
+                android:paddingTop="2dp"
+                android:paddingRight="6dp"
+                android:paddingEnd="6dp"
+                android:paddingBottom="2dp"
+                android:text="≥ $90,000"
+                android:textColor="#3FB950"
+                android:textSize="10sp"
+                android:textStyle="bold" />
         </LinearLayout>
 
         <!-- Item 2 -->
@@ -134,65 +120,48 @@
             android:id="@+id/item_2_root"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingTop="5dp"
-            android:paddingBottom="5dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
             android:visibility="gone">
 
-            <LinearLayout
-                android:layout_width="match_parent"
+            <TextView
+                android:id="@+id/item_2_symbol"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:id="@+id/item_2_symbol"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="ETH/USDT"
-                    android:textColor="#FFFFFF"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/item_2_price"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginLeft="8dp"
-                    android:layout_marginStart="8dp"
-                    android:layout_weight="1"
-                    android:text="$3,150.00"
-                    android:textColor="#F59E0B"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/item_2_badge"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/widget_badge_bg"
-                    android:paddingLeft="6dp"
-                    android:paddingStart="6dp"
-                    android:paddingTop="2dp"
-                    android:paddingRight="6dp"
-                    android:paddingEnd="6dp"
-                    android:paddingBottom="2dp"
-                    android:text="-1.20% ▼"
-                    android:textColor="#F85149"
-                    android:textSize="10sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
+                android:text="ETH/USDT"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/item_2_info"
-                android:layout_width="match_parent"
+                android:id="@+id/item_2_price"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="1dp"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:text="Target: $3,000"
-                android:textColor="#8B949E"
-                android:textSize="10sp" />
+                android:layout_marginLeft="8dp"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="$3,150.00"
+                android:textColor="#F59E0B"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/item_2_badge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/widget_badge_bg"
+                android:paddingLeft="6dp"
+                android:paddingStart="6dp"
+                android:paddingTop="2dp"
+                android:paddingRight="6dp"
+                android:paddingEnd="6dp"
+                android:paddingBottom="2dp"
+                android:text="≤ $3,000"
+                android:textColor="#F85149"
+                android:textSize="10sp"
+                android:textStyle="bold" />
         </LinearLayout>
 
         <!-- Item 3 -->
@@ -200,65 +169,48 @@
             android:id="@+id/item_3_root"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:paddingTop="5dp"
-            android:paddingBottom="5dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingTop="6dp"
+            android:paddingBottom="6dp"
             android:visibility="gone">
 
-            <LinearLayout
-                android:layout_width="match_parent"
+            <TextView
+                android:id="@+id/item_3_symbol"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:id="@+id/item_3_symbol"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="SOL/USDT"
-                    android:textColor="#FFFFFF"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/item_3_price"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginLeft="8dp"
-                    android:layout_marginStart="8dp"
-                    android:layout_weight="1"
-                    android:text="$185.20"
-                    android:textColor="#F59E0B"
-                    android:textSize="13sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/item_3_badge"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/widget_badge_bg"
-                    android:paddingLeft="6dp"
-                    android:paddingStart="6dp"
-                    android:paddingTop="2dp"
-                    android:paddingRight="6dp"
-                    android:paddingEnd="6dp"
-                    android:paddingBottom="2dp"
-                    android:text="✔️ Done"
-                    android:textColor="#E3B341"
-                    android:textSize="10sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
+                android:text="SOL/USDT"
+                android:textColor="#FFFFFF"
+                android:textSize="13sp"
+                android:textStyle="bold" />
 
             <TextView
-                android:id="@+id/item_3_info"
-                android:layout_width="match_parent"
+                android:id="@+id/item_3_price"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="1dp"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:text="Target Reached"
-                android:textColor="#8B949E"
-                android:textSize="10sp" />
+                android:layout_marginLeft="8dp"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="$185.20"
+                android:textColor="#F59E0B"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/item_3_badge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/widget_badge_bg"
+                android:paddingLeft="6dp"
+                android:paddingStart="6dp"
+                android:paddingTop="2dp"
+                android:paddingRight="6dp"
+                android:paddingEnd="6dp"
+                android:paddingBottom="2dp"
+                android:text="✔️ Done"
+                android:textColor="#E3B341"
+                android:textSize="10sp"
+                android:textStyle="bold" />
         </LinearLayout>
 
         <!-- Empty state -->
@@ -276,17 +228,19 @@
     </LinearLayout>
 
     <FrameLayout
+        android:id="@+id/widget_divider_2"
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="#21262D" />
 
     <!-- Footer -->
     <TextView
+        android:id="@+id/widget_footer_text"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
         android:gravity="center"
         android:text="Tap to open Alarmer"
-        android:textColor="#58A6FF"
+        android:textColor="#10B981"
         android:textSize="9sp" />
 </LinearLayout>

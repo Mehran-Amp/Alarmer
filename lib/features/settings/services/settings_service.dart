@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import '../../../core/services/native_widget_sync_service.dart';
 import '../models/app_settings.dart';
 
 /// Local-First Persistent Settings Service.
@@ -24,6 +25,7 @@ class SettingsService extends ChangeNotifier {
           final decoded = jsonDecode(content) as Map<String, dynamic>;
           _settings = AppSettings.fromJson(decoded);
           notifyListeners();
+          NativeWidgetSyncService.syncTheme(_settings.themePalette);
           return;
         }
       }
@@ -32,11 +34,16 @@ class SettingsService extends ChangeNotifier {
     }
     _settings = const AppSettings();
     notifyListeners();
+    NativeWidgetSyncService.syncTheme(_settings.themePalette);
   }
 
   Future<void> update(AppSettings newSettings) async {
+    final themeChanged = _settings.themePalette != newSettings.themePalette;
     _settings = newSettings;
     notifyListeners();
+    if (themeChanged) {
+      NativeWidgetSyncService.syncTheme(_settings.themePalette);
+    }
     try {
       final file = _file;
       await file.writeAsString(jsonEncode(_settings.toJson()));

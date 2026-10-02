@@ -7,6 +7,7 @@ import '../../core/utils/format_utils.dart';
 
 /// Interactive Home Screen Widget representation for Alarmer.
 /// Displays active market alerts, live ticker prices, target proximity, and quick actions.
+/// Always rendered in English with exact app alert order, no percentage change, and no notes.
 class AlertHomeWidgetView extends StatelessWidget {
   final JsonAlertRuleRepository repository;
   final String lang;
@@ -28,14 +29,14 @@ class AlertHomeWidgetView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isFa = lang == 'fa' || lang == 'ar' || lang == 'ckb';
+    // Keep exact order from the app
     final allRules = repository.allRules;
     final activeRules = allRules.where((r) => r.isActive).toList();
 
     return Container(
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: theme.colorScheme.primary.withValues(alpha: 0.25),
           width: 1.5,
@@ -48,12 +49,12 @@ class AlertHomeWidgetView extends StatelessWidget {
           ),
         ],
       ),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Widget Header
+          // Widget Header (Always English)
           Row(
             children: [
               Container(
@@ -74,7 +75,7 @@ class AlertHomeWidgetView extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isFa ? 'ویجت زنده صفحه اصلی' : 'Live Home Screen Widget',
+                      'Alarmer Live Widget',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
@@ -82,7 +83,7 @@ class AlertHomeWidgetView extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '${activeRules.length} ${isFa ? 'هشدار فعال' : 'active alerts'} • ${DateFormat('HH:mm').format(DateTime.now())}',
+                      '${activeRules.length} active alerts • ${DateFormat('HH:mm').format(DateTime.now())}',
                       style: TextStyle(
                         fontSize: 10,
                         color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -111,7 +112,7 @@ class AlertHomeWidgetView extends StatelessWidget {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      isFa ? 'زنده' : 'LIVE',
+                      'LIVE',
                       style: TextStyle(
                         fontSize: 9,
                         fontWeight: FontWeight.w900,
@@ -128,23 +129,23 @@ class AlertHomeWidgetView extends StatelessWidget {
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                   onPressed: onRefresh,
-                  tooltip: isFa ? 'بروزرسانی زنده' : 'Refresh All',
+                  tooltip: 'Refresh All',
                 ),
               ],
             ],
           ),
 
-          const SizedBox(height: 12),
-          const Divider(height: 1),
+          const SizedBox(height: 10),
+          Divider(height: 1, color: theme.dividerColor.withValues(alpha: 0.5)),
           const SizedBox(height: 8),
 
-          // Alerts List in Widget
+          // Alerts List in Widget (Exact order, no percentage change, no notes)
           if (allRules.isEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 20),
+              padding: const EdgeInsets.symmetric(vertical: 16),
               child: Center(
                 child: Text(
-                  isFa ? 'هنوز هشداری تنظیم نشده است' : 'No alerts configured yet',
+                  'No alerts configured yet',
                   style: TextStyle(
                     fontSize: 12,
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
@@ -157,10 +158,10 @@ class AlertHomeWidgetView extends StatelessWidget {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: isCompact ? allRules.take(3).length : allRules.take(5).length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              separatorBuilder: (_, __) => const SizedBox(height: 6),
               itemBuilder: (context, index) {
                 final rule = allRules[index];
-                return _buildWidgetAlertRow(context, rule, theme, isFa);
+                return _buildWidgetAlertRow(context, rule, theme);
               },
             ),
 
@@ -168,9 +169,7 @@ class AlertHomeWidgetView extends StatelessWidget {
             const SizedBox(height: 8),
             Center(
               child: Text(
-                isFa
-                    ? '+ ${allRules.length - (isCompact ? 3 : 5)} هشدار دیگر در پس‌زمینه فعال است'
-                    : '+ ${allRules.length - (isCompact ? 3 : 5)} more alerts running in background',
+                '+ ${allRules.length - (isCompact ? 3 : 5)} more alerts in background',
                 style: TextStyle(
                   fontSize: 10,
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
@@ -187,14 +186,13 @@ class AlertHomeWidgetView extends StatelessWidget {
     BuildContext context,
     AlertRule rule,
     ThemeData theme,
-    bool isFa,
   ) {
     final currentPrice = rule.lastCheckedPrice ?? rule.basePrice ?? 0.0;
     final formattedPrice = currentPrice > 0
         ? FormatUtils.formatPrice(currentPrice, currencySymbol: rule.pair.counterCurrency)
         : '—';
 
-    // One-shot condition done check (only non-percentage one-shot rules)
+    // One-shot condition done check
     final isOneShot = rule.conditionType == AlertConditionType.priceThreshold;
     final isDone = isOneShot && (!rule.isActive || rule.isTriggered);
 
@@ -203,141 +201,91 @@ class AlertHomeWidgetView extends StatelessWidget {
     Color badgeTextColor;
 
     if (isDone) {
-      badgeText = isFa ? '✔️ انجام شد' : '✔️ Done';
+      badgeText = '✔️ Done';
       badgeBgColor = const Color(0xFF2B2410);
       badgeTextColor = const Color(0xFFE3B341); // Gold
     } else {
       switch (rule.conditionType) {
-        case AlertConditionType.percentChange:
-          final base = rule.basePrice ?? currentPrice;
-          if (base > 0 && currentPrice > 0) {
-            final diff = ((currentPrice - base) / base) * 100.0;
-            final isUp = diff >= 0;
-            final sign = isUp ? '+' : '';
-            final arrow = isUp ? '▲' : '▼';
-            badgeText = '$sign${diff.toStringAsFixed(2)}% $arrow';
-            badgeBgColor = isUp ? const Color(0xFF1A2E20) : const Color(0xFF2E1A1D);
-            badgeTextColor = isUp ? const Color(0xFF3FB950) : const Color(0xFFF85149);
-          } else {
-            badgeText = '±${rule.percent?.toStringAsFixed(1)}%';
-            badgeBgColor = const Color(0xFF21262D);
-            badgeTextColor = const Color(0xFF58A6FF);
-          }
-          break;
-
         case AlertConditionType.priceThreshold:
           final target = rule.targetPrice ?? 0.0;
-          if (target > 0 && currentPrice > 0) {
-            final diff = ((currentPrice - target) / target) * 100.0;
-            final isUp = currentPrice >= target;
-            final sign = diff >= 0 ? '+' : '';
-            final arrow = isUp ? '▲' : '▼';
-            badgeText = '$sign${diff.toStringAsFixed(2)}% $arrow';
-            badgeBgColor = isUp ? const Color(0xFF1A2E20) : const Color(0xFF2E1A1D);
-            badgeTextColor = isUp ? const Color(0xFF3FB950) : const Color(0xFFF85149);
-          } else {
-            final isUp = rule.direction == AlertDirection.above;
-            badgeText = '${rule.direction == AlertDirection.above ? '≥' : '≤'} $target';
-            badgeBgColor = isUp ? const Color(0xFF1A2E20) : const Color(0xFF2E1A1D);
-            badgeTextColor = isUp ? const Color(0xFF3FB950) : const Color(0xFFF85149);
-          }
-          break;
-
-        case AlertConditionType.absolutePriceChange:
-          final base = rule.basePrice ?? currentPrice;
-          final diff = currentPrice - base;
-          final isUp = diff >= 0;
-          final sign = isUp ? '+' : '-';
-          final arrow = isUp ? '▲' : '▼';
-          badgeText = '$sign${FormatUtils.formatPrice(diff.abs(), currencySymbol: rule.pair.counterCurrency)} $arrow';
+          final isUp = rule.direction == AlertDirection.above;
+          badgeText = '${isUp ? '≥' : '≤'} ${FormatUtils.formatPrice(target, currencySymbol: rule.pair.counterCurrency)}';
           badgeBgColor = isUp ? const Color(0xFF1A2E20) : const Color(0xFF2E1A1D);
           badgeTextColor = isUp ? const Color(0xFF3FB950) : const Color(0xFFF85149);
           break;
 
-        case AlertConditionType.volumeChange:
-          badgeText = 'Vol ${rule.volumePercent}%';
+        case AlertConditionType.percentChange:
+          final isUp = rule.direction == AlertDirection.above;
+          badgeText = '${isUp ? '▲' : '▼'} Step';
           badgeBgColor = const Color(0xFF21262D);
-          badgeTextColor = const Color(0xFF58A6FF);
+          badgeTextColor = theme.colorScheme.primary;
+          break;
+
+        case AlertConditionType.absolutePriceChange:
+          final isUp = rule.direction == AlertDirection.above;
+          badgeText = '${isUp ? '▲' : '▼'} Move';
+          badgeBgColor = const Color(0xFF21262D);
+          badgeTextColor = theme.colorScheme.primary;
+          break;
+
+        case AlertConditionType.volumeChange:
+          badgeText = 'Vol';
+          badgeBgColor = const Color(0xFF21262D);
+          badgeTextColor = theme.colorScheme.primary;
           break;
       }
     }
 
-    String infoText = '';
-    if (rule.customNote != null && rule.customNote!.trim().isNotEmpty) {
-      infoText = rule.customNote!.trim();
-    } else if (rule.targetPrice != null && rule.targetPrice! > 0) {
-      infoText = '${isFa ? 'هدف' : 'Target'}: ${FormatUtils.formatPrice(rule.targetPrice!, currencySymbol: rule.pair.counterCurrency)}';
-    } else if (rule.percent != null) {
-      infoText = '${isFa ? 'تغییر مرحله‌ای' : 'Step'}: ±${rule.percent}%';
-    } else {
-      infoText = isFa ? 'هشدار فعال' : 'Active Alert';
-    }
-
+    // Clean single-line row: Symbol, Price, Condition Badge (No notes line)
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
         color: theme.scaffoldBackgroundColor.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
         ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Row(
         children: [
-          Row(
-            children: [
-              // Symbol
-              Text(
-                rule.pair.displayName,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: theme.colorScheme.onSurface,
-                ),
-              ),
-              const SizedBox(width: 8),
+          // Symbol
+          Text(
+            rule.pair.displayName,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: theme.colorScheme.onSurface,
+            ),
+          ),
+          const SizedBox(width: 8),
 
-              // Live Current Price next to symbol
-              Expanded(
-                child: Text(
-                  formattedPrice,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    fontFamily: 'monospace',
-                    color: Color(0xFFF59E0B),
-                  ),
-                ),
+          // Live Current Price
+          Expanded(
+            child: Text(
+              formattedPrice,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                fontFamily: 'monospace',
+                color: Color(0xFFF59E0B),
               ),
-
-              // Status / % / Done Badge
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                decoration: BoxDecoration(
-                  color: badgeBgColor,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  badgeText,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: badgeTextColor,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
 
-          const SizedBox(height: 3),
-
-          // Target note / info text (No exchange name)
-          Text(
-            infoText,
-            style: TextStyle(
-              fontSize: 10,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+          // Condition / Done Badge (No percentage change)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+            decoration: BoxDecoration(
+              color: badgeBgColor,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              badgeText,
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+                color: badgeTextColor,
+              ),
             ),
           ),
         ],

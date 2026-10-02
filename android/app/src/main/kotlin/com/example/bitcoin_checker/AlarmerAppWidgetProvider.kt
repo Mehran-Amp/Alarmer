@@ -12,8 +12,11 @@ import org.json.JSONObject
 
 /**
  * Native Android Home Screen AppWidget Provider for Alarmer.
- * Shows multi-alert list with pair symbol, last checked price, target/notes, and colored change/Done badges.
- * Built with 100% RemoteViews-safe methods compatible across all Android versions (Android 8 - 15).
+ * - Always displays English labels
+ * - Matches active user theme colors dynamically
+ * - Preserves exact order of alerts from the app
+ * - No notes line & no percentage change
+ * - 100% RemoteViews safe for all Android versions
  */
 class AlarmerAppWidgetProvider : AppWidgetProvider() {
 
@@ -55,7 +58,6 @@ class AlarmerAppWidgetProvider : AppWidgetProvider() {
                 val rowRoots = intArrayOf(R.id.item_1_root, R.id.item_2_root, R.id.item_3_root)
                 val rowSymbols = intArrayOf(R.id.item_1_symbol, R.id.item_2_symbol, R.id.item_3_symbol)
                 val rowPrices = intArrayOf(R.id.item_1_price, R.id.item_2_price, R.id.item_3_price)
-                val rowInfos = intArrayOf(R.id.item_1_info, R.id.item_2_info, R.id.item_3_info)
                 val rowBadges = intArrayOf(R.id.item_1_badge, R.id.item_2_badge, R.id.item_3_badge)
 
                 if (jsonStr != null && jsonStr.isNotEmpty()) {
@@ -63,14 +65,34 @@ class AlarmerAppWidgetProvider : AppWidgetProvider() {
                         val root = JSONObject(jsonStr)
                         val activeCount = root.optInt("activeCount", 0)
                         val headerTitle = root.optString("title", "Alarmer Live")
+                        val footerText = root.optString("footerText", "Tap to open Alarmer")
                         val items = root.optJSONArray("items")
+                        val themeObj = root.optJSONObject("theme")
 
+                        // Dynamic Theme Colors
+                        val primaryColor = themeObj?.optLong("primary", 0xFF10B981)?.toInt() ?: 0xFF10B981.toInt()
+                        val textPrimaryColor = themeObj?.optLong("textPrimary", 0xFFF9FAFB)?.toInt() ?: 0xFFF9FAFB.toInt()
+                        val textSecondaryColor = themeObj?.optLong("textSecondary", 0xFF9CA3AF)?.toInt() ?: 0xFF9CA3AF.toInt()
+                        val borderColor = themeObj?.optLong("border", 0xFF374151)?.toInt() ?: 0xFF374151.toInt()
+                        val isDark = themeObj?.optInt("isDark", 1) == 1
+
+                        // Apply theme to header, dividers, badge, and footer
                         views.setTextViewText(R.id.widget_header_title, headerTitle)
+                        views.setTextColor(R.id.widget_header_title, textPrimaryColor)
+
                         views.setTextViewText(R.id.widget_active_badge, "⚡ $activeCount Active")
+                        views.setTextColor(R.id.widget_active_badge, primaryColor)
+
+                        views.setTextViewText(R.id.widget_footer_text, footerText)
+                        views.setTextColor(R.id.widget_footer_text, primaryColor)
+
+                        views.setInt(R.id.widget_divider_1, "setBackgroundColor", borderColor)
+                        views.setInt(R.id.widget_divider_2, "setBackgroundColor", borderColor)
 
                         val count = items?.length() ?: 0
                         if (count == 0) {
                             views.setViewVisibility(R.id.widget_empty_text, View.VISIBLE)
+                            views.setTextColor(R.id.widget_empty_text, textSecondaryColor)
                             for (rootId in rowRoots) {
                                 views.setViewVisibility(rootId, View.GONE)
                             }
@@ -82,26 +104,28 @@ class AlarmerAppWidgetProvider : AppWidgetProvider() {
                                     val symbol = item.optString("symbol", "—")
                                     val price = item.optString("price", "—")
                                     val badge = item.optString("badge", "—")
-                                    val info = item.optString("info", "")
                                     val isDone = item.optBoolean("isDone", false)
                                     val isPositive = item.optBoolean("isPositive", false)
                                     val isNegative = item.optBoolean("isNegative", false)
 
                                     views.setViewVisibility(rowRoots[i], View.VISIBLE)
                                     views.setTextViewText(rowSymbols[i], symbol)
+                                    views.setTextColor(rowSymbols[i], textPrimaryColor)
+
                                     views.setTextViewText(rowPrices[i], price)
-                                    views.setTextViewText(rowInfos[i], info)
+                                    views.setTextColor(rowPrices[i], 0xFFF59E0B.toInt()) // High-visibility Gold price
+
                                     views.setTextViewText(rowBadges[i], badge)
 
-                                    // RemoteViews-safe text coloring
+                                    // Badge color condition
                                     if (isDone) {
-                                        views.setTextColor(rowBadges[i], 0xFFE3B341.toInt()) // Gold
+                                        views.setTextColor(rowBadges[i], 0xFFE3B341.toInt()) // Gold Done
                                     } else if (isPositive) {
                                         views.setTextColor(rowBadges[i], 0xFF3FB950.toInt()) // Green
                                     } else if (isNegative) {
                                         views.setTextColor(rowBadges[i], 0xFFF85149.toInt()) // Red
                                     } else {
-                                        views.setTextColor(rowBadges[i], 0xFF58A6FF.toInt()) // Blue
+                                        views.setTextColor(rowBadges[i], primaryColor) // Theme primary
                                     }
                                 } else {
                                     views.setViewVisibility(rowRoots[i], View.GONE)
@@ -124,19 +148,12 @@ class AlarmerAppWidgetProvider : AppWidgetProvider() {
                     views.setViewVisibility(R.id.widget_empty_text, View.GONE)
                     views.setTextViewText(R.id.item_1_symbol, "BTC/USDT")
                     views.setTextViewText(R.id.item_1_price, "$87,420.00")
-                    views.setTextViewText(R.id.item_1_info, "Real-time Monitoring")
-                    views.setTextViewText(R.id.item_1_badge, "+3.52% ▲")
+                    views.setTextViewText(R.id.item_1_badge, "Active")
                     views.setTextColor(R.id.item_1_badge, 0xFF3FB950.toInt())
                 }
 
                 appWidgetManager.updateAppWidget(appWidgetId, views)
-            } catch (e: Exception) {
-                // Fallback minimal safe view
-                try {
-                    val fallbackViews = RemoteViews(context.packageName, R.layout.alarmer_appwidget_layout)
-                    appWidgetManager.updateAppWidget(appWidgetId, fallbackViews)
-                } catch (_: Exception) {}
-            }
+            } catch (_: Exception) {}
         }
 
         fun updateAllWidgets(context: Context) {
