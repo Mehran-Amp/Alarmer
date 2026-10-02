@@ -527,84 +527,7 @@ class _SettingsPageState extends State<SettingsPage> {
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: AppTokens.space16, vertical: AppTokens.space20),
         children: [
-          // Section 1: Themes & Colors (4 Modes)
-          _buildSectionHeader(AppStrings.get('theme_and_colors', lang), theme),
-          const SizedBox(height: AppTokens.space8),
-
-          Container(
-            padding: const EdgeInsets.all(AppTokens.space16),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: theme.dividerColor),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                GridView.count(
-                  crossAxisCount: 2,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 8,
-                  childAspectRatio: 2.3,
-                  children: [
-                    _buildThemeCard(
-                      palette: AppThemePalette.darkGreen,
-                      currentPalette: settings.themePalette,
-                      title: AppStrings.get('theme_dark_green', lang),
-                      bgPreview: const Color(0xFF090D16),
-                      accent: const Color(0xFF10B981),
-                      onSelect: () => settingsService.setPalette(AppThemePalette.darkGreen),
-                    ),
-                    _buildThemeCard(
-                      palette: AppThemePalette.lightGreen,
-                      currentPalette: settings.themePalette,
-                      title: AppStrings.get('theme_light_green', lang),
-                      bgPreview: const Color(0xFFF3F4F6),
-                      accent: const Color(0xFF059669),
-                      onSelect: () => settingsService.setPalette(AppThemePalette.lightGreen),
-                    ),
-                    _buildThemeCard(
-                      palette: AppThemePalette.darkOrange,
-                      currentPalette: settings.themePalette,
-                      title: AppStrings.get('theme_dark_orange', lang),
-                      bgPreview: const Color(0xFF0C0A09),
-                      accent: const Color(0xFFF97316),
-                      onSelect: () => settingsService.setPalette(AppThemePalette.darkOrange),
-                    ),
-                    _buildThemeCard(
-                      palette: AppThemePalette.lightOrange,
-                      currentPalette: settings.themePalette,
-                      title: AppStrings.get('theme_light_orange', lang),
-                      bgPreview: const Color(0xFFFAF8F5),
-                      accent: const Color(0xFFEA580C),
-                      onSelect: () => settingsService.setPalette(AppThemePalette.lightOrange),
-                    ),
-                    _buildThemeCard(
-                      palette: AppThemePalette.darkPurpleBlue,
-                      currentPalette: settings.themePalette,
-                      title: AppStrings.get('theme_dark_purple_blue', lang),
-                      bgPreview: const Color(0xFF0B0D1B),
-                      accent: const Color(0xFF8B5CF6),
-                      onSelect: () => settingsService.setPalette(AppThemePalette.darkPurpleBlue),
-                    ),
-                    _buildThemeCard(
-                      palette: AppThemePalette.lightPurpleBlue,
-                      currentPalette: settings.themePalette,
-                      title: AppStrings.get('theme_light_purple_blue', lang),
-                      bgPreview: const Color(0xFFF5F6FF),
-                      accent: const Color(0xFF7C3AED),
-                      onSelect: () => settingsService.setPalette(AppThemePalette.lightPurpleBlue),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: AppTokens.space20),
-
-          // Section 2: Languages (10 Languages)
+          // Section 1: Languages (10 Languages)
           _buildSectionHeader(AppStrings.get('select_language', lang), theme),
           const SizedBox(height: AppTokens.space8),
 
@@ -647,7 +570,7 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: AppTokens.space20),
 
-          // Section 3: Sound, Ringtone & Vibration
+          // Section 2: Sound, Ringtone & Vibration
           _buildSectionHeader(isFa ? 'تنظیمات صدای آلارم و زنگ هشدار' : 'Alarm Sound & Ringtone', theme),
           const SizedBox(height: AppTokens.space8),
 
@@ -845,6 +768,83 @@ class _SettingsPageState extends State<SettingsPage> {
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                       ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: AppTokens.space20),
+
+          // Section 3: Themes & Colors (Theme & Color Schema)
+          _buildSectionHeader(AppStrings.get('theme_and_colors', lang), theme),
+          const SizedBox(height: AppTokens.space8),
+
+          Container(
+            padding: const EdgeInsets.all(AppTokens.space16),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surface,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: theme.dividerColor),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                GridView.count(
+                  crossAxisCount: 2,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisSpacing: 8,
+                  mainAxisSpacing: 8,
+                  childAspectRatio: 2.3,
+                  children: [
+                    _buildThemeCard(
+                      palette: AppThemePalette.darkGreen,
+                      currentPalette: settings.themePalette,
+                      title: AppStrings.get('theme_dark_green', lang),
+                      bgPreview: const Color(0xFF090D16),
+                      accent: const Color(0xFF10B981),
+                      onSelect: () => settingsService.setPalette(AppThemePalette.darkGreen),
+                    ),
+                    _buildThemeCard(
+                      palette: AppThemePalette.lightGreen,
+                      currentPalette: settings.themePalette,
+                      title: AppStrings.get('theme_light_green', lang),
+                      bgPreview: const Color(0xFFF3F4F6),
+                      accent: const Color(0xFF059669),
+                      onSelect: () => settingsService.setPalette(AppThemePalette.lightGreen),
+                    ),
+                    _buildThemeCard(
+                      palette: AppThemePalette.darkOrange,
+                      currentPalette: settings.themePalette,
+                      title: AppStrings.get('theme_dark_orange', lang),
+                      bgPreview: const Color(0xFF0C0A09),
+                      accent: const Color(0xFFF97316),
+                      onSelect: () => settingsService.setPalette(AppThemePalette.darkOrange),
+                    ),
+                    _buildThemeCard(
+                      palette: AppThemePalette.lightOrange,
+                      currentPalette: settings.themePalette,
+                      title: AppStrings.get('theme_light_orange', lang),
+                      bgPreview: const Color(0xFFFAF8F5),
+                      accent: const Color(0xFFEA580C),
+                      onSelect: () => settingsService.setPalette(AppThemePalette.lightOrange),
+                    ),
+                    _buildThemeCard(
+                      palette: AppThemePalette.darkPurpleBlue,
+                      currentPalette: settings.themePalette,
+                      title: AppStrings.get('theme_dark_purple_blue', lang),
+                      bgPreview: const Color(0xFF0B0D1B),
+                      accent: const Color(0xFF8B5CF6),
+                      onSelect: () => settingsService.setPalette(AppThemePalette.darkPurpleBlue),
+                    ),
+                    _buildThemeCard(
+                      palette: AppThemePalette.lightPurpleBlue,
+                      currentPalette: settings.themePalette,
+                      title: AppStrings.get('theme_light_purple_blue', lang),
+                      bgPreview: const Color(0xFFF5F6FF),
+                      accent: const Color(0xFF7C3AED),
+                      onSelect: () => settingsService.setPalette(AppThemePalette.lightPurpleBlue),
                     ),
                   ],
                 ),

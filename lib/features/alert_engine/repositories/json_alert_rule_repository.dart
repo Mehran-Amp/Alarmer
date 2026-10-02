@@ -70,16 +70,26 @@ class JsonAlertRuleRepository {
     }
   }
 
-  /// Streams all alert rules sorted by creation time (descending)
+  /// Streams all alert rules maintaining the exact user custom order
   Stream<List<AlertRule>> watchAllRules() async* {
-    yield _sortedRules();
-    yield* _rulesStreamController.stream.map((_) => _sortedRules());
+    yield List.unmodifiable(_rules);
+    yield* _rulesStreamController.stream.map((list) => List.unmodifiable(list));
   }
 
-  List<AlertRule> _sortedRules() {
-    final list = List<AlertRule>.from(_rules);
-    list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    return list;
+  /// Reorders rules dynamically via drag-and-drop and persists instantly
+  Future<void> reorderRules(int oldIndex, int newIndex) async {
+    if (!_isLoaded) await load();
+    if (oldIndex < 0 || oldIndex >= _rules.length) return;
+    if (newIndex < 0) newIndex = 0;
+    if (newIndex > _rules.length) newIndex = _rules.length;
+
+    if (oldIndex < newIndex) {
+      newIndex -= 1;
+    }
+    final rule = _rules.removeAt(oldIndex);
+    _rules.insert(newIndex, rule);
+    _notify();
+    await _persist();
   }
 
   /// Fetches all active rules for a specific exchange and market symbol

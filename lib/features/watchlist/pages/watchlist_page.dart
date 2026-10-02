@@ -30,6 +30,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
   AlertRule? _recentlyDeletedRule;
   Timer? _undoToastTimer;
   Timer? _countdownTimer;
+  bool _isRefreshingAll = false;
 
   @override
   void initState() {
@@ -44,6 +45,65 @@ class _WatchlistPageState extends State<WatchlistPage> {
     _countdownTimer?.cancel();
     _undoToastTimer?.cancel();
     super.dispose();
+  }
+
+  Future<void> _refreshAllAlerts(
+    BuildContext context,
+    JsonAlertRuleRepository repository,
+    SchedulerService scheduler,
+    String lang,
+  ) async {
+    if (_isRefreshingAll) return;
+    setState(() => _isRefreshingAll = true);
+    final theme = Theme.of(context);
+    final isFa = lang == 'fa' || lang == 'ar' || lang == 'ckb';
+
+    try {
+      final activeRules = repository.allRules.where((r) => r.isActive).toList();
+      if (activeRules.isEmpty) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              content: Text(isFa ? 'هیچ هشدار فعالی برای بروزرسانی وجود ندارد.' : 'No active alerts to refresh.'),
+              backgroundColor: theme.colorScheme.surfaceContainerHighest,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+        return;
+      }
+
+      int successCount = 0;
+      for (final rule in activeRules) {
+        final ok = await scheduler.checkRuleNow(rule);
+        if (ok) successCount++;
+      }
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            content: Text(
+              isFa
+                  ? 'بروزرسانی همگانی انجام شد ($successCount از ${activeRules.length} نماد بروز شدند)'
+                  : 'Refreshed $successCount of ${activeRules.length} symbols successfully.',
+            ),
+            backgroundColor: theme.colorScheme.primary,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) {
+        setState(() => _isRefreshingAll = false);
+      }
+    }
   }
 
   void _openCreateFlow() {
@@ -192,9 +252,24 @@ class _WatchlistPageState extends State<WatchlistPage> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.widgets_rounded, size: 22),
-            tooltip: AppStrings.get('home_widget_title', lang),
-            onPressed: () => _showHomeWidgetSheet(context, repository, lang, theme),
+            icon: _isRefreshingAll
+                ? SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.2,
+                      color: theme.colorScheme.primary,
+                    ),
+                  )
+                : Icon(
+                    Icons.sync_rounded,
+                    size: 24,
+                    color: theme.colorScheme.primary,
+                  ),
+            tooltip: lang == 'fa' ? 'به‌روزرسانی آنی تمامی نمادها' : 'Refresh All Symbols',
+            onPressed: _isRefreshingAll
+                ? null
+                : () => _refreshAllAlerts(context, repository, scheduler, lang),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
@@ -229,7 +304,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
                 return _buildEmptyState(lang, theme);
               }
 
-              return ListView.separated(
+              return ReorderableListView.builder(
                 padding: const EdgeInsets.fromLTRB(
                   AppTokens.space16,
                   AppTokens.space12,
@@ -237,10 +312,16 @@ class _WatchlistPageState extends State<WatchlistPage> {
                   80.0,
                 ),
                 itemCount: rules.length,
-                separatorBuilder: (_, __) => const SizedBox(height: AppTokens.space12),
+                onReorder: (oldIndex, newIndex) {
+                  repository.reorderRules(oldIndex, newIndex);
+                },
                 itemBuilder: (context, index) {
                   final rule = rules[index];
-                  return _buildAlertCard(rule, repository, scheduler, lang);
+                  return Padding(
+                    key: ValueKey(rule.uuid),
+                    padding: const EdgeInsets.only(bottom: AppTokens.space12),
+                    child: _buildAlertCard(rule, repository, scheduler, lang),
+                  );
                 },
               );
             },

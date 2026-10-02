@@ -2,10 +2,10 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
     android:background="@drawable/widget_background_dark"
     android:orientation="vertical"
-    android:padding="10dp">
+    android:padding="8dp">
 
     <!-- Header Bar with Check All Action -->
     <LinearLayout
@@ -14,12 +14,12 @@
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:paddingBottom="6dp">
+        android:paddingBottom="5dp">
 
         <ImageView
             android:id="@+id/widget_logo_icon"
-            android:layout_width="20dp"
-            android:layout_height="20dp"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
             android:src="@mipmap/ic_launcher" />
 
         <LinearLayout
@@ -36,7 +36,7 @@
                 android:layout_height="wrap_content"
                 android:text="Alarmer Live"
                 android:textColor="#F9FAFB"
-                android:textSize="12sp"
+                android:textSize="11.5sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -45,26 +45,26 @@
                 android:layout_height="wrap_content"
                 android:text="Active Alerts"
                 android:textColor="#9CA3AF"
-                android:textSize="9sp" />
+                android:textSize="8.5sp" />
         </LinearLayout>
 
-        <!-- Check All Action Button in Header (Comfortable Height & Touch Target) -->
+        <!-- Check All Action Button in Header -->
         <TextView
             android:id="@+id/widget_refresh_btn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="@drawable/widget_live_pill_dark"
             android:gravity="center"
-            android:minHeight="32dp"
-            android:paddingLeft="10dp"
-            android:paddingStart="10dp"
-            android:paddingTop="5dp"
-            android:paddingRight="10dp"
-            android:paddingEnd="10dp"
-            android:paddingBottom="5dp"
+            android:minHeight="28dp"
+            android:paddingLeft="9dp"
+            android:paddingStart="9dp"
+            android:paddingTop="4dp"
+            android:paddingRight="9dp"
+            android:paddingEnd="9dp"
+            android:paddingBottom="4dp"
             android:text="⟳ Check All"
             android:textColor="#10B981"
-            android:textSize="9.5sp"
+            android:textSize="9sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -72,195 +72,36 @@
         android:id="@+id/widget_divider_1"
         android:layout_width="match_parent"
         android:layout_height="1dp"
-        android:layout_marginBottom="5dp"
+        android:layout_marginBottom="4dp"
         android:background="#21262D" />
 
-    <!-- List of Clean Single-Line Alert Cards -->
-    <LinearLayout
-        android:id="@+id/widget_items_container"
+    <!-- Scrollable ListView for all alerts -->
+    <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="vertical">
+        android:layout_height="0dp"
+        android:layout_weight="1">
 
-        <!-- Item 1 Card (Single Line: Symbol | Price | Pct) -->
-        <LinearLayout
-            android:id="@+id/item_1_root"
+        <ListView
+            android:id="@+id/widget_listview"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="4dp"
-            android:background="@drawable/widget_row_bg_dark"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingLeft="8dp"
-            android:paddingStart="8dp"
-            android:paddingTop="6dp"
-            android:paddingRight="8dp"
-            android:paddingEnd="8dp"
-            android:paddingBottom="6dp"
-            android:visibility="visible">
+            android:layout_height="match_parent"
+            android:divider="@null"
+            android:dividerHeight="0dp"
+            android:scrollbars="vertical" />
 
-            <TextView
-                android:id="@+id/item_1_symbol"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="BTC/USDT"
-                android:textColor="#F9FAFB"
-                android:textSize="11sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/item_1_price"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="6dp"
-                android:layout_marginStart="6dp"
-                android:layout_weight="1"
-                android:text="$87,420.00"
-                android:textColor="#F59E0B"
-                android:textSize="11sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/item_1_badge"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="@drawable/badge_green_dark"
-                android:paddingLeft="6dp"
-                android:paddingStart="6dp"
-                android:paddingTop="2.5dp"
-                android:paddingRight="6dp"
-                android:paddingEnd="6dp"
-                android:paddingBottom="2.5dp"
-                android:text="+2.50% ▲"
-                android:textColor="#3FB950"
-                android:textSize="9sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <!-- Item 2 Card -->
-        <LinearLayout
-            android:id="@+id/item_2_root"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="4dp"
-            android:background="@drawable/widget_row_bg_dark"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingLeft="8dp"
-            android:paddingStart="8dp"
-            android:paddingTop="6dp"
-            android:paddingRight="8dp"
-            android:paddingEnd="8dp"
-            android:paddingBottom="6dp"
-            android:visibility="gone">
-
-            <TextView
-                android:id="@+id/item_2_symbol"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="ETH/USDT"
-                android:textColor="#F9FAFB"
-                android:textSize="11sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/item_2_price"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="6dp"
-                android:layout_marginStart="6dp"
-                android:layout_weight="1"
-                android:text="$3,150.00"
-                android:textColor="#F59E0B"
-                android:textSize="11sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/item_2_badge"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="@drawable/badge_red_dark"
-                android:paddingLeft="6dp"
-                android:paddingStart="6dp"
-                android:paddingTop="2.5dp"
-                android:paddingRight="6dp"
-                android:paddingEnd="6dp"
-                android:paddingBottom="2.5dp"
-                android:text="-1.20% ▼"
-                android:textColor="#F85149"
-                android:textSize="9sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <!-- Item 3 Card -->
-        <LinearLayout
-            android:id="@+id/item_3_root"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="4dp"
-            android:background="@drawable/widget_row_bg_dark"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingLeft="8dp"
-            android:paddingStart="8dp"
-            android:paddingTop="6dp"
-            android:paddingRight="8dp"
-            android:paddingEnd="8dp"
-            android:paddingBottom="6dp"
-            android:visibility="gone">
-
-            <TextView
-                android:id="@+id/item_3_symbol"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="SOL/USDT"
-                android:textColor="#F9FAFB"
-                android:textSize="11sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/item_3_price"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_marginLeft="6dp"
-                android:layout_marginStart="6dp"
-                android:layout_weight="1"
-                android:text="$185.20"
-                android:textColor="#F59E0B"
-                android:textSize="11sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/item_3_badge"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:background="@drawable/badge_done_dark"
-                android:paddingLeft="6dp"
-                android:paddingStart="6dp"
-                android:paddingTop="2.5dp"
-                android:paddingRight="6dp"
-                android:paddingEnd="6dp"
-                android:paddingBottom="2.5dp"
-                android:text="✔️ Done"
-                android:textColor="#E3B341"
-                android:textSize="9sp"
-                android:textStyle="bold" />
-        </LinearLayout>
-
-        <!-- Empty state -->
+        <!-- Empty state when no alerts exist -->
         <TextView
             android:id="@+id/widget_empty_text"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
             android:gravity="center"
-            android:paddingTop="10dp"
-            android:paddingBottom="10dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
             android:text="No active alerts configured"
             android:textColor="#9CA3AF"
             android:textSize="10sp"
             android:visibility="gone" />
-    </LinearLayout>
+    </FrameLayout>
 
     <FrameLayout
         android:id="@+id/widget_divider_2"
@@ -274,9 +115,9 @@
         android:id="@+id/widget_footer_text"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="3dp"
+        android:layout_marginTop="2.5dp"
         android:gravity="center"
         android:text="Tap to open Alarmer"
         android:textColor="#10B981"
-        android:textSize="8.5sp" />
+        android:textSize="8sp" />
 </LinearLayout>

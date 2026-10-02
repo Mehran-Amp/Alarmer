@@ -6,16 +6,15 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.view.View
+import android.net.Uri
 import android.widget.RemoteViews
 import org.json.JSONObject
 
 /**
  * Native Android Home Screen AppWidget Provider for Alarmer.
- * - Dynamic theme switching: Dark mode uses dark backgrounds, light mode uses clean white/light backgrounds.
- * - Single-line rows: Symbol | Monospace Price | Percentage+Arrow Badge
- * - Interactive 'Check All' button with comfortable height and instant refresh
- * - Compact wrap-content height matching active alerts count
+ * - Dynamic theme switching (Dark & Light)
+ * - Scrollable ListView displaying ALL symbols in exact user custom order
+ * - Interactive 'Check All' button with instant sync
  */
 class AlarmerAppWidgetProvider : AppWidgetProvider() {
 
@@ -54,18 +53,6 @@ class AlarmerAppWidgetProvider : AppWidgetProvider() {
             try {
                 val views = RemoteViews(context.packageName, R.layout.alarmer_appwidget_layout)
 
-                // Tap on widget root opens app
-                val openIntent = Intent(context, MainActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                }
-                val openPendingIntent = PendingIntent.getActivity(
-                    context,
-                    0,
-                    openIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                views.setOnClickPendingIntent(R.id.widget_root, openPendingIntent)
-
                 // Tap on 'Check All' button
                 val refreshIntent = Intent(context, AlarmerAppWidgetProvider::class.java).apply {
                     action = ACTION_REFRESH_WIDGET
@@ -78,13 +65,15 @@ class AlarmerAppWidgetProvider : AppWidgetProvider() {
                 )
                 views.setOnClickPendingIntent(R.id.widget_refresh_btn, refreshPendingIntent)
 
+                // Read SharedPreferences state
                 val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
                 val jsonStr = prefs.getString("flutter.widget_alerts_json", null)
 
-                val rowRoots = intArrayOf(R.id.item_1_root, R.id.item_2_root, R.id.item_3_root)
-                val rowSymbols = intArrayOf(R.id.item_1_symbol, R.id.item_2_symbol, R.id.item_3_symbol)
-                val rowPrices = intArrayOf(R.id.item_1_price, R.id.item_2_price, R.id.item_3_price)
-                val rowBadges = intArrayOf(R.id.item_1_badge, R.id.item_2_badge, R.id.item_3_badge)
+                var isDark = true
+                var primaryColor = 0xFF10B981.toInt()
+                var textPrimaryColor = 0xFFF9FAFB.toInt()
+                var textSecondaryColor = 0xFF9CA3AF.toInt()
+                var borderColor = 0xFF374151.toInt()
 
                 if (jsonStr != null && jsonStr.isNotEmpty()) {
                     try {
@@ -93,31 +82,23 @@ class AlarmerAppWidgetProvider : AppWidgetProvider() {
                         val headerTitle = root.optString("title", "Alarmer Live")
                         val subtitle = root.optString("subtitle", "$activeCount active")
                         val footerText = root.optString("footerText", "Tap to open Alarmer")
-                        val items = root.optJSONArray("items")
                         val themeObj = root.optJSONObject("theme")
 
-                        // Active Theme Properties
-                        val isDark = themeObj?.optInt("isDark", 1) == 1
-                        val primaryColor = themeObj?.optLong("primary", if (isDark) 0xFF10B981 else 0xFF059669)?.toInt()
-                            ?: if (isDark) 0xFF10B981.toInt() else 0xFF059669.toInt()
-                        val textPrimaryColor = themeObj?.optLong("textPrimary", if (isDark) 0xFFF9FAFB else 0xFF111827)?.toInt()
-                            ?: if (isDark) 0xFFF9FAFB.toInt() else 0xFF111827.toInt()
-                        val textSecondaryColor = themeObj?.optLong("textSecondary", if (isDark) 0xFF9CA3AF else 0xFF4B5563)?.toInt()
-                            ?: if (isDark) 0xFF9CA3AF.toInt() else 0xFF4B5563.toInt()
-                        val borderColor = themeObj?.optLong("border", if (isDark) 0xFF374151 else 0xFFD1D5DB)?.toInt()
-                            ?: if (isDark) 0xFF374151.toInt() else 0xFFD1D5DB.toInt()
-                        val priceColor = themeObj?.optLong("price", if (isDark) 0xFFF59E0B else 0xFFD97706)?.toInt()
-                            ?: if (isDark) 0xFFF59E0B.toInt() else 0xFFD97706.toInt()
+                        if (themeObj != null) {
+                            isDark = themeObj.optInt("isDark", 1) == 1
+                            primaryColor = themeObj.optLong("primary", if (isDark) 0xFF10B981 else 0xFF059669).toInt()
+                            textPrimaryColor = themeObj.optLong("textPrimary", if (isDark) 0xFFF9FAFB else 0xFF111827).toInt()
+                            textSecondaryColor = themeObj.optLong("textSecondary", if (isDark) 0xFF9CA3AF else 0xFF4B5563).toInt()
+                            borderColor = themeObj.optLong("border", if (isDark) 0xFF374151 else 0xFFD1D5DB).toInt()
+                        }
 
-                        // Dynamic Background Switching (Dark vs Light)
+                        // Backgrounds
                         val bgRes = if (isDark) R.drawable.widget_background_dark else R.drawable.widget_background_light
-                        val rowRes = if (isDark) R.drawable.widget_row_bg_dark else R.drawable.widget_row_bg_light
                         val btnRes = if (isDark) R.drawable.widget_live_pill_dark else R.drawable.widget_live_pill_light
 
                         views.setInt(R.id.widget_root, "setBackgroundResource", bgRes)
                         views.setInt(R.id.widget_refresh_btn, "setBackgroundResource", btnRes)
 
-                        // Header & Dividers styling
                         views.setTextViewText(R.id.widget_header_title, headerTitle)
                         views.setTextColor(R.id.widget_header_title, textPrimaryColor)
 
@@ -132,74 +113,32 @@ class AlarmerAppWidgetProvider : AppWidgetProvider() {
 
                         views.setInt(R.id.widget_divider_1, "setBackgroundColor", borderColor)
                         views.setInt(R.id.widget_divider_2, "setBackgroundColor", borderColor)
-
-                        val count = items?.length() ?: 0
-                        if (count == 0) {
-                            views.setViewVisibility(R.id.widget_empty_text, View.VISIBLE)
-                            views.setTextColor(R.id.widget_empty_text, textSecondaryColor)
-                            for (rootId in rowRoots) {
-                                views.setViewVisibility(rootId, View.GONE)
-                            }
-                        } else {
-                            views.setViewVisibility(R.id.widget_empty_text, View.GONE)
-                            for (i in 0 until 3) {
-                                if (i < count) {
-                                    val item = items!!.getJSONObject(i)
-                                    val symbol = item.optString("symbol", "—")
-                                    val price = item.optString("price", "—")
-                                    val badge = item.optString("badge", "—")
-                                    val isDone = item.optBoolean("isDone", false)
-                                    val isPositive = item.optBoolean("isPositive", true)
-
-                                    views.setViewVisibility(rowRoots[i], View.VISIBLE)
-                                    views.setInt(rowRoots[i], "setBackgroundResource", rowRes)
-
-                                    views.setTextViewText(rowSymbols[i], symbol)
-                                    views.setTextColor(rowSymbols[i], textPrimaryColor)
-
-                                    views.setTextViewText(rowPrices[i], price)
-                                    views.setTextColor(rowPrices[i], priceColor)
-
-                                    views.setTextViewText(rowBadges[i], badge)
-
-                                    // Dynamic Badge Background and Text Color
-                                    if (isDone) {
-                                        views.setInt(rowBadges[i], "setBackgroundResource", if (isDark) R.drawable.badge_done_dark else R.drawable.badge_done_light)
-                                        views.setTextColor(rowBadges[i], if (isDark) 0xFFE3B341.toInt() else 0xFFD97706.toInt())
-                                    } else if (isPositive) {
-                                        views.setInt(rowBadges[i], "setBackgroundResource", if (isDark) R.drawable.badge_green_dark else R.drawable.badge_green_light)
-                                        views.setTextColor(rowBadges[i], if (isDark) 0xFF3FB950.toInt() else 0xFF16A34A.toInt())
-                                    } else {
-                                        views.setInt(rowBadges[i], "setBackgroundResource", if (isDark) R.drawable.badge_red_dark else R.drawable.badge_red_light)
-                                        views.setTextColor(rowBadges[i], if (isDark) 0xFFF85149.toInt() else 0xFFDC2626.toInt())
-                                    }
-                                } else {
-                                    views.setViewVisibility(rowRoots[i], View.GONE)
-                                }
-                            }
-                        }
-                    } catch (_: Exception) {
-                        views.setViewVisibility(R.id.widget_empty_text, View.VISIBLE)
-                        for (rootId in rowRoots) {
-                            views.setViewVisibility(rootId, View.GONE)
-                        }
-                    }
-                } else {
-                    // Default fallback
-                    views.setTextViewText(R.id.widget_header_title, "Alarmer Live")
-                    views.setTextViewText(R.id.widget_subtitle, "1 active")
-                    views.setTextViewText(R.id.widget_refresh_btn, "⟳ Check All")
-                    views.setViewVisibility(R.id.item_1_root, View.VISIBLE)
-                    views.setViewVisibility(R.id.item_2_root, View.GONE)
-                    views.setViewVisibility(R.id.item_3_root, View.GONE)
-                    views.setViewVisibility(R.id.widget_empty_text, View.GONE)
-                    views.setTextViewText(R.id.item_1_symbol, "BTC/USDT")
-                    views.setTextViewText(R.id.item_1_price, "$87,420.00")
-                    views.setTextViewText(R.id.item_1_badge, "+3.45% ▲")
-                    views.setTextColor(R.id.item_1_badge, 0xFF3FB950.toInt())
+                    } catch (_: Exception) {}
                 }
 
+                // Bind RemoteViewsService adapter for the scrollable ListView
+                val serviceIntent = Intent(context, AlarmerWidgetService::class.java).apply {
+                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+                    data = Uri.parse(toUri(Intent.URI_INTENT_SCHEME))
+                }
+                views.setRemoteAdapter(R.id.widget_listview, serviceIntent)
+                views.setEmptyView(R.id.widget_listview, R.id.widget_empty_text)
+
+                // Item click template
+                val itemClickIntent = Intent(context, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                }
+                val itemClickPendingIntent = PendingIntent.getActivity(
+                    context,
+                    2,
+                    itemClickIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                views.setPendingIntentTemplate(R.id.widget_listview, itemClickPendingIntent)
+
+                // Push update and notify dataset changed
                 appWidgetManager.updateAppWidget(appWidgetId, views)
+                appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetId, R.id.widget_listview)
             } catch (_: Exception) {}
         }
 
@@ -212,6 +151,7 @@ class AlarmerAppWidgetProvider : AppWidgetProvider() {
                     for (appWidgetId in appWidgetIds) {
                         updateAppWidget(context, appWidgetManager, appWidgetId)
                     }
+                    appWidgetManager.notifyAppWidgetViewDataChanged(appWidgetIds, R.id.widget_listview)
                 }
             } catch (_: Exception) {}
         }

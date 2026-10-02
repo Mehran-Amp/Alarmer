@@ -28,8 +28,8 @@ class NativeWidgetSyncService {
         _cachedPalette = themePalette;
       }
 
-      // Preserve exact order from app alerts list
-      final items = rules.take(5).map((rule) {
+      // Preserve exact order from app alerts list for all rules
+      final items = rules.map((rule) {
         final symbol = rule.pair.displayName;
         final currentPrice = rule.lastCheckedPrice ?? rule.basePrice ?? 0.0;
         final formattedPrice = currentPrice > 0
