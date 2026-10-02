@@ -12,9 +12,9 @@ import org.json.JSONObject
 
 /**
  * Native Android Home Screen AppWidget Provider for Alarmer.
+ * - Dynamic theme switching: Dark mode uses dark backgrounds, light mode uses clean white/light backgrounds.
  * - Single-line rows: Symbol | Monospace Price | Percentage+Arrow Badge
- * - Interactive 'Check All' button in header that triggers refresh
- * - Full theme fidelity (light, dark, amoled) with high contrast
+ * - Interactive 'Check All' button with comfortable height and instant refresh
  * - Compact wrap-content height matching active alerts count
  */
 class AlarmerAppWidgetProvider : AppWidgetProvider() {
@@ -22,7 +22,6 @@ class AlarmerAppWidgetProvider : AppWidgetProvider() {
     override fun onReceive(context: Context, intent: Intent) {
         super.onReceive(context, intent)
         if (intent.action == ACTION_REFRESH_WIDGET) {
-            // Re-render all widgets immediately and bring app to sync
             updateAllWidgets(context)
             try {
                 val launchIntent = Intent(context, MainActivity::class.java).apply {
@@ -67,7 +66,7 @@ class AlarmerAppWidgetProvider : AppWidgetProvider() {
                 )
                 views.setOnClickPendingIntent(R.id.widget_root, openPendingIntent)
 
-                // Tap on 'Check All' button in header
+                // Tap on 'Check All' button
                 val refreshIntent = Intent(context, AlarmerAppWidgetProvider::class.java).apply {
                     action = ACTION_REFRESH_WIDGET
                 }
@@ -97,7 +96,7 @@ class AlarmerAppWidgetProvider : AppWidgetProvider() {
                         val items = root.optJSONArray("items")
                         val themeObj = root.optJSONObject("theme")
 
-                        // Active Theme Colors
+                        // Active Theme Properties
                         val isDark = themeObj?.optInt("isDark", 1) == 1
                         val primaryColor = themeObj?.optLong("primary", if (isDark) 0xFF10B981 else 0xFF059669)?.toInt()
                             ?: if (isDark) 0xFF10B981.toInt() else 0xFF059669.toInt()
@@ -109,6 +108,14 @@ class AlarmerAppWidgetProvider : AppWidgetProvider() {
                             ?: if (isDark) 0xFF374151.toInt() else 0xFFD1D5DB.toInt()
                         val priceColor = themeObj?.optLong("price", if (isDark) 0xFFF59E0B else 0xFFD97706)?.toInt()
                             ?: if (isDark) 0xFFF59E0B.toInt() else 0xFFD97706.toInt()
+
+                        // Dynamic Background Switching (Dark vs Light)
+                        val bgRes = if (isDark) R.drawable.widget_background_dark else R.drawable.widget_background_light
+                        val rowRes = if (isDark) R.drawable.widget_row_bg_dark else R.drawable.widget_row_bg_light
+                        val btnRes = if (isDark) R.drawable.widget_live_pill_dark else R.drawable.widget_live_pill_light
+
+                        views.setInt(R.id.widget_root, "setBackgroundResource", bgRes)
+                        views.setInt(R.id.widget_refresh_btn, "setBackgroundResource", btnRes)
 
                         // Header & Dividers styling
                         views.setTextViewText(R.id.widget_header_title, headerTitle)
@@ -145,6 +152,8 @@ class AlarmerAppWidgetProvider : AppWidgetProvider() {
                                     val isPositive = item.optBoolean("isPositive", true)
 
                                     views.setViewVisibility(rowRoots[i], View.VISIBLE)
+                                    views.setInt(rowRoots[i], "setBackgroundResource", rowRes)
+
                                     views.setTextViewText(rowSymbols[i], symbol)
                                     views.setTextColor(rowSymbols[i], textPrimaryColor)
 
@@ -153,12 +162,15 @@ class AlarmerAppWidgetProvider : AppWidgetProvider() {
 
                                     views.setTextViewText(rowBadges[i], badge)
 
-                                    // Entire badge text in pure green / red / gold
+                                    // Dynamic Badge Background and Text Color
                                     if (isDone) {
+                                        views.setInt(rowBadges[i], "setBackgroundResource", if (isDark) R.drawable.badge_done_dark else R.drawable.badge_done_light)
                                         views.setTextColor(rowBadges[i], if (isDark) 0xFFE3B341.toInt() else 0xFFD97706.toInt())
                                     } else if (isPositive) {
+                                        views.setInt(rowBadges[i], "setBackgroundResource", if (isDark) R.drawable.badge_green_dark else R.drawable.badge_green_light)
                                         views.setTextColor(rowBadges[i], if (isDark) 0xFF3FB950.toInt() else 0xFF16A34A.toInt())
                                     } else {
+                                        views.setInt(rowBadges[i], "setBackgroundResource", if (isDark) R.drawable.badge_red_dark else R.drawable.badge_red_light)
                                         views.setTextColor(rowBadges[i], if (isDark) 0xFFF85149.toInt() else 0xFFDC2626.toInt())
                                     }
                                 } else {

@@ -3,7 +3,7 @@
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@drawable/widget_background"
+    android:background="@drawable/widget_background_dark"
     android:orientation="vertical"
     android:padding="10dp">
 
@@ -18,8 +18,8 @@
 
         <ImageView
             android:id="@+id/widget_logo_icon"
-            android:layout_width="18dp"
-            android:layout_height="18dp"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
             android:src="@mipmap/ic_launcher" />
 
         <LinearLayout
@@ -48,21 +48,23 @@
                 android:textSize="9sp" />
         </LinearLayout>
 
-        <!-- Check All Action Button in Header -->
+        <!-- Check All Action Button in Header (Comfortable Height & Touch Target) -->
         <TextView
             android:id="@+id/widget_refresh_btn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:background="@drawable/widget_live_pill"
-            android:paddingLeft="8dp"
-            android:paddingStart="8dp"
-            android:paddingTop="3dp"
-            android:paddingRight="8dp"
-            android:paddingEnd="8dp"
-            android:paddingBottom="3dp"
+            android:background="@drawable/widget_live_pill_dark"
+            android:gravity="center"
+            android:minHeight="32dp"
+            android:paddingLeft="10dp"
+            android:paddingStart="10dp"
+            android:paddingTop="5dp"
+            android:paddingRight="10dp"
+            android:paddingEnd="10dp"
+            android:paddingBottom="5dp"
             android:text="⟳ Check All"
             android:textColor="#10B981"
-            android:textSize="9sp"
+            android:textSize="9.5sp"
             android:textStyle="bold" />
     </LinearLayout>
 
@@ -87,15 +89,15 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="4dp"
-            android:background="@drawable/widget_row_bg"
+            android:background="@drawable/widget_row_bg_dark"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:paddingLeft="8dp"
             android:paddingStart="8dp"
-            android:paddingTop="5dp"
+            android:paddingTop="6dp"
             android:paddingRight="8dp"
             android:paddingEnd="8dp"
-            android:paddingBottom="5dp"
+            android:paddingBottom="6dp"
             android:visibility="visible">
 
             <TextView
@@ -123,13 +125,13 @@
                 android:id="@+id/item_1_badge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:background="@drawable/badge_green"
-                android:paddingLeft="5dp"
-                android:paddingStart="5dp"
-                android:paddingTop="2dp"
-                android:paddingRight="5dp"
-                android:paddingEnd="5dp"
-                android:paddingBottom="2dp"
+                android:background="@drawable/badge_green_dark"
+                android:paddingLeft="6dp"
+                android:paddingStart="6dp"
+                android:paddingTop="2.5dp"
+                android:paddingRight="6dp"
+                android:paddingEnd="6dp"
+                android:paddingBottom="2.5dp"
                 android:text="+2.50% ▲"
                 android:textColor="#3FB950"
                 android:textSize="9sp"
@@ -142,15 +144,15 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="4dp"
-            android:background="@drawable/widget_row_bg"
+            android:background="@drawable/widget_row_bg_dark"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:paddingLeft="8dp"
             android:paddingStart="8dp"
-            android:paddingTop="5dp"
+            android:paddingTop="6dp"
             android:paddingRight="8dp"
             android:paddingEnd="8dp"
-            android:paddingBottom="5dp"
+            android:paddingBottom="6dp"
             android:visibility="gone">
 
             <TextView
@@ -178,13 +180,13 @@
                 android:id="@+id/item_2_badge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:background="@drawable/badge_red"
-                android:paddingLeft="5dp"
-                android:paddingStart="5dp"
-                android:paddingTop="2dp"
-                android:paddingRight="5dp"
-                android:paddingEnd="5dp"
-                android:paddingBottom="2dp"
+                android:background="@drawable/badge_red_dark"
+                android:paddingLeft="6dp"
+                android:paddingStart="6dp"
+                android:paddingTop="2.5dp"
+                android:paddingRight="6dp"
+                android:paddingEnd="6dp"
+                android:paddingBottom="2.5dp"
                 android:text="-1.20% ▼"
                 android:textColor="#F85149"
                 android:textSize="9sp"
@@ -197,15 +199,15 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="4dp"
-            android:background="@drawable/widget_row_bg"
+            android:background="@drawable/widget_row_bg_dark"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:paddingLeft="8dp"
             android:paddingStart="8dp"
-            android:paddingTop="5dp"
+            android:paddingTop="6dp"
             android:paddingRight="8dp"
             android:paddingEnd="8dp"
-            android:paddingBottom="5dp"
+            android:paddingBottom="6dp"
             android:visibility="gone">
 
             <TextView
@@ -233,13 +235,13 @@
                 android:id="@+id/item_3_badge"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:background="@drawable/badge_done"
-                android:paddingLeft="5dp"
-                android:paddingStart="5dp"
-                android:paddingTop="2dp"
-                android:paddingRight="5dp"
-                android:paddingEnd="5dp"
-                android:paddingBottom="2dp"
+                android:background="@drawable/badge_done_dark"
+                android:paddingLeft="6dp"
+                android:paddingStart="6dp"
+                android:paddingTop="2.5dp"
+                android:paddingRight="6dp"
+                android:paddingEnd="6dp"
+                android:paddingBottom="2.5dp"
                 android:text="✔️ Done"
                 android:textColor="#E3B341"
                 android:textSize="9sp"
