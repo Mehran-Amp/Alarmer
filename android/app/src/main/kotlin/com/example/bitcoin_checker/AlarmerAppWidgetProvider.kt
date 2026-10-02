@@ -6,11 +6,13 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.view.View
 import android.widget.RemoteViews
+import org.json.JSONObject
 
 /**
- * Native Android Home Screen AppWidget Provider for Alarmer (BitcoinChecker).
- * Appears in the launcher widget selector list and renders real-time market data.
+ * Native Android Home Screen AppWidget Provider for Alarmer.
+ * Shows multi-alert list with pair symbol, last checked price, target/notes, and colored change/Done badges.
  */
 class AlarmerAppWidgetProvider : AppWidgetProvider() {
 
@@ -44,19 +46,84 @@ class AlarmerAppWidgetProvider : AppWidgetProvider() {
             )
             views.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
 
-            // Read latest saved data if available in SharedPreferences
+            // Read JSON payload from SharedPreferences
             val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-            val savedSymbol = prefs.getString("flutter.widget_symbol", "BTC/USDT") ?: "BTC/USDT"
-            val savedPrice = prefs.getString("flutter.widget_price", "$87,420.00") ?: "$87,420.00"
-            val savedChange = prefs.getString("flutter.widget_change", "+3.52% ▲") ?: "+3.52% ▲"
-            val savedExchange = prefs.getString("flutter.widget_exchange", "Binance • Live") ?: "Binance • Live"
-            val savedStatus = prefs.getString("flutter.widget_status", "⚡ Active Alerts Monitored") ?: "⚡ Active Alerts Monitored"
+            val jsonStr = prefs.getString("flutter.widget_alerts_json", null)
 
-            views.setTextViewText(R.id.widget_pair_symbol, savedSymbol)
-            views.setTextViewText(R.id.widget_price, savedPrice)
-            views.setTextViewText(R.id.widget_change_badge, savedChange)
-            views.setTextViewText(R.id.widget_exchange, savedExchange)
-            views.setTextViewText(R.id.widget_alert_status, savedStatus)
+            if (jsonStr != null && jsonStr.isNotEmpty()) {
+                try {
+                    val root = JSONObject(jsonStr)
+                    val activeCount = root.optInt("activeCount", 0)
+                    val headerTitle = root.optString("title", "Alarmer Live")
+                    val items = root.optJSONArray("items")
+
+                    views.setTextViewText(R.id.widget_header_title, headerTitle)
+                    views.setTextViewText(R.id.widget_active_badge, "⚡ $activeCount Active")
+
+                    val rowRoots = intArrayOf(R.id.item_1_root, R.id.item_2_root, R.id.item_3_root)
+                    val rowSymbols = intArrayOf(R.id.item_1_symbol, R.id.item_2_symbol, R.id.item_3_symbol)
+                    val rowPrices = intArrayOf(R.id.item_1_price, R.id.item_2_price, R.id.item_3_price)
+                    val rowInfos = intArrayOf(R.id.item_1_info, R.id.item_2_info, R.id.item_3_info)
+                    val rowBadges = intArrayOf(R.id.item_1_badge, R.id.item_2_badge, R.id.item_3_badge)
+
+                    val count = items?.length() ?: 0
+                    if (count == 0) {
+                        views.setViewVisibility(R.id.widget_empty_text, View.VISIBLE)
+                        for (rootId in rowRoots) {
+                            views.setViewVisibility(rootId, View.GONE)
+                        }
+                    } else {
+                        views.setViewVisibility(R.id.widget_empty_text, View.GONE)
+                        for (i in 0 until 3) {
+                            if (i < count) {
+                                val item = items!!.getJSONObject(i)
+                                val symbol = item.optString("symbol", "—")
+                                val price = item.optString("price", "—")
+                                val badge = item.optString("badge", "—")
+                                val info = item.optString("info", "")
+                                val isDone = item.optBoolean("isDone", false)
+                                val isPositive = item.optBoolean("isPositive", false)
+                                val isNegative = item.optBoolean("isNegative", false)
+
+                                views.setViewVisibility(rowRoots[i], View.VISIBLE)
+                                views.setTextViewText(rowSymbols[i], symbol)
+                                views.setTextViewText(rowPrices[i], price)
+                                views.setTextViewText(rowInfos[i], info)
+                                views.setTextViewText(rowBadges[i], badge)
+
+                                // Badge styling per condition & direction
+                                if (isDone) {
+                                    views.setInt(rowBadges[i], "setBackgroundResource", R.drawable.badge_done)
+                                    views.setTextColor(rowBadges[i], 0xFFE3B341.toInt()) // Gold
+                                } else if (isPositive) {
+                                    views.setInt(rowBadges[i], "setBackgroundResource", R.drawable.badge_green)
+                                    views.setTextColor(rowBadges[i], 0xFF3FB950.toInt()) // Green
+                                } else if (isNegative) {
+                                    views.setInt(rowBadges[i], "setBackgroundResource", R.drawable.badge_red)
+                                    views.setTextColor(rowBadges[i], 0xFFF85149.toInt()) // Red
+                                } else {
+                                    views.setInt(rowBadges[i], "setBackgroundResource", R.drawable.widget_badge_bg)
+                                    views.setTextColor(rowBadges[i], 0xFF58A6FF.toInt()) // Blue
+                                }
+                            } else {
+                                views.setViewVisibility(rowRoots[i], View.GONE)
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    views.setViewVisibility(R.id.widget_empty_text, View.VISIBLE)
+                }
+            } else {
+                // Fallback default
+                views.setViewVisibility(R.id.item_1_root, View.VISIBLE)
+                views.setViewVisibility(R.id.item_2_root, View.GONE)
+                views.setViewVisibility(R.id.item_3_root, View.GONE)
+                views.setViewVisibility(R.id.widget_empty_text, View.GONE)
+                views.setTextViewText(R.id.item_1_symbol, "BTC/USDT")
+                views.setTextViewText(R.id.item_1_price, "$87,420.00")
+                views.setTextViewText(R.id.item_1_info, "Real-time Monitoring")
+                views.setTextViewText(R.id.item_1_badge, "+3.52% ▲")
+            }
 
             appWidgetManager.updateAppWidget(appWidgetId, views)
         }

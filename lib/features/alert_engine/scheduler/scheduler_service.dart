@@ -7,6 +7,7 @@ import '../../notifications/services/notification_service.dart';
 import '../models/alert_rule.dart';
 import '../repositories/json_alert_rule_repository.dart';
 import 'condition_evaluator.dart';
+import '../../../core/services/native_widget_sync_service.dart';
 
 /// Personal Price-Alert Polling Scheduler Service.
 /// Wakes up on a 1-second fine tick, checks which individual alert rules are due
@@ -140,6 +141,7 @@ class SchedulerService {
 
       // 4. Save updated rule to repository
       await _alertRuleRepository.saveRule(updatedRule);
+      NativeWidgetSyncService.syncAlerts(_alertRuleRepository.allRules);
       return true;
     } catch (_) {
       // On offline / network failure: keep the last known valid price intact in repository

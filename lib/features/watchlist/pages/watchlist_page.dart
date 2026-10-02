@@ -721,7 +721,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
 
   String _formatInterval(int seconds, String lang) {
     if (seconds < 60) {
-      return '$seconds ${AppStrings.get('seconds', lang)}';
+      return '$seconds s';
     } else if (seconds < 3600) {
       final m = seconds ~/ 60;
       return '$m ${AppStrings.get('minutes', lang)}';
@@ -806,23 +806,33 @@ class _WatchlistPageState extends State<WatchlistPage> {
     final isFa = AppStrings.isRtl(lang);
     switch (rule.conditionType) {
       case AlertConditionType.priceThreshold:
-        final dirStr = rule.direction == AlertDirection.above
-            ? (isFa ? 'صعود به بالای' : 'Crosses above')
-            : (rule.direction == AlertDirection.below ? (isFa ? 'سقوط به زیر' : 'Drops below') : (isFa ? 'رسیدن به' : 'Reaches'));
+        final String dirStr;
+        if (rule.direction == AlertDirection.above) {
+          dirStr = lang == 'ckb' ? 'بەرزبوونەوە بۆ سەرووی' : (isFa ? 'صعود به بالای' : 'Crosses above');
+        } else if (rule.direction == AlertDirection.below) {
+          dirStr = lang == 'ckb' ? 'دابەزین بۆ خوارەوەی' : (isFa ? 'سقوط به زیر' : 'Drops below');
+        } else {
+          dirStr = lang == 'ckb' ? 'گەیشتن بە' : (isFa ? 'رسیدن به' : 'Reaches');
+        }
         return '$dirStr ${FormatUtils.formatPrice(rule.targetPrice ?? 0, currencySymbol: rule.counterCurrency)}';
 
       case AlertConditionType.percentChange:
         final p = rule.percent ?? 0;
-        final dirStr = rule.direction == AlertDirection.above
-            ? (isFa ? 'رشد حداقل' : 'Surges by +')
-            : (rule.direction == AlertDirection.below ? (isFa ? 'افت حداقل' : 'Drops by -') : (isFa ? 'نوسان' : 'Moves ±'));
+        final String dirStr;
+        if (rule.direction == AlertDirection.above) {
+          dirStr = lang == 'ckb' ? 'بەرزبوونەوەی' : (isFa ? 'رشد حداقل' : 'Surges by +');
+        } else if (rule.direction == AlertDirection.below) {
+          dirStr = lang == 'ckb' ? 'دابەزینی' : (isFa ? 'افت حداقل' : 'Drops by -');
+        } else {
+          dirStr = lang == 'ckb' ? 'جووڵە' : (isFa ? 'نوسان' : 'Moves ±');
+        }
         return '$dirStr ${p.toStringAsFixed(1)}%';
 
       case AlertConditionType.absolutePriceChange:
-        return '${isFa ? "تغییر" : "Changes by"} ${FormatUtils.formatPrice(rule.deltaAbsolute ?? 0, currencySymbol: rule.counterCurrency)}';
+        return '${lang == 'ckb' ? "گۆڕانکاری" : (isFa ? "تغییر" : "Changes by")} ${FormatUtils.formatPrice(rule.deltaAbsolute ?? 0, currencySymbol: rule.counterCurrency)}';
 
       case AlertConditionType.volumeChange:
-        return '${isFa ? "جهش حجم" : "Volume jump"} ${(rule.volumePercent ?? 0).toStringAsFixed(1)}%';
+        return '${lang == 'ckb' ? "هەڵکشانی قەبارە" : (isFa ? "جهش حجم" : "Volume jump")} ${(rule.volumePercent ?? 0).toStringAsFixed(1)}%';
     }
   }
 

@@ -291,7 +291,7 @@ class AlertRow extends StatelessWidget {
         if (lang == 'fa') {
           return 'نوسان قیمت $dir${rule.targetValue ?? 0}% در $windowLabel';
         } else if (lang == 'ckb') {
-          return 'گۆڕانی نرخ $dir${rule.targetValue ?? 0}% لە $windowLabel';
+          return 'جووڵەی نرخ $dir${rule.targetValue ?? 0}% لە $windowLabel';
         } else if (lang == 'ar') {
           return 'تغير السعر $dir${rule.targetValue ?? 0}% خلال $windowLabel';
         }

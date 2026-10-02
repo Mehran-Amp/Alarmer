@@ -16,6 +16,16 @@ class MainActivity : FlutterActivity() {
                     val moved = moveTaskToBack(true)
                     result.success(moved)
                 }
+                "updateWidgetList" -> {
+                    val json = call.argument<String>("json") ?: ""
+                    val prefs = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+                    prefs.edit()
+                        .putString("flutter.widget_alerts_json", json)
+                        .apply()
+
+                    AlarmerAppWidgetProvider.updateAllWidgets(this)
+                    result.success(true)
+                }
                 "updateWidget" -> {
                     val symbol = call.argument<String>("symbol") ?: "BTC/USDT"
                     val price = call.argument<String>("price") ?: "$87,420.00"

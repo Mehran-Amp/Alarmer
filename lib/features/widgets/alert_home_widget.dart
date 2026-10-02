@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 import '../alert_engine/models/alert_rule.dart';
 import '../alert_engine/models/trigger_mode.dart';
 import '../alert_engine/repositories/json_alert_rule_repository.dart';
-import '../../core/localization/app_strings.dart';
+import '../../core/utils/format_utils.dart';
 
 /// Interactive Home Screen Widget representation for Alarmer.
 /// Displays active market alerts, live ticker prices, target proximity, and quick actions.
@@ -155,7 +155,7 @@ class AlertHomeWidgetView extends StatelessWidget {
           else
             ListView.separated(
               shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
+              physics: const NeverScrollableScrollPhysics),
               itemCount: isCompact ? allRules.take(3).length : allRules.take(5).length,
               separatorBuilder: (_, __) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
@@ -190,24 +190,88 @@ class AlertHomeWidgetView extends StatelessWidget {
     bool isFa,
   ) {
     final currentPrice = rule.lastCheckedPrice ?? rule.basePrice ?? 0.0;
-    final targetPrice = rule.targetPrice ?? 0.0;
-    
-    // Proximity to target calculation
-    double progress = 0.5;
-    if (targetPrice > 0 && currentPrice > 0) {
-      if (rule.direction == AlertDirection.above) {
-        progress = (currentPrice / targetPrice).clamp(0.0, 1.0);
-      } else {
-        progress = (targetPrice / currentPrice).clamp(0.0, 1.0);
+    final formattedPrice = currentPrice > 0
+        ? FormatUtils.formatPrice(currentPrice, currencySymbol: rule.pair.counterCurrency)
+        : '—';
+
+    // One-shot condition done check (only non-percentage one-shot rules)
+    final isOneShot = rule.conditionType == AlertConditionType.priceThreshold;
+    final isDone = isOneShot && (!rule.isActive || rule.isTriggered);
+
+    String badgeText;
+    Color badgeBgColor;
+    Color badgeTextColor;
+
+    if (isDone) {
+      badgeText = isFa ? '✔️ انجام شد' : '✔️ Done';
+      badgeBgColor = const Color(0xFF2B2410);
+      badgeTextColor = const Color(0xFFE3B341); // Gold
+    } else {
+      switch (rule.conditionType) {
+        case AlertConditionType.percentChange:
+          final base = rule.basePrice ?? currentPrice;
+          if (base > 0 && currentPrice > 0) {
+            final diff = ((currentPrice - base) / base) * 100.0;
+            final isUp = diff >= 0;
+            final sign = isUp ? '+' : '';
+            final arrow = isUp ? '▲' : '▼';
+            badgeText = '$sign${diff.toStringAsFixed(2)}% $arrow';
+            badgeBgColor = isUp ? const Color(0xFF1A2E20) : const Color(0xFF2E1A1D);
+            badgeTextColor = isUp ? const Color(0xFF3FB950) : const Color(0xFFF85149);
+          } else {
+            badgeText = '±${rule.percent?.toStringAsFixed(1)}%';
+            badgeBgColor = const Color(0xFF21262D);
+            badgeTextColor = const Color(0xFF58A6FF);
+          }
+          break;
+
+        case AlertConditionType.priceThreshold:
+          final target = rule.targetPrice ?? 0.0;
+          if (target > 0 && currentPrice > 0) {
+            final diff = ((currentPrice - target) / target) * 100.0;
+            final isUp = currentPrice >= target;
+            final sign = diff >= 0 ? '+' : '';
+            final arrow = isUp ? '▲' : '▼';
+            badgeText = '$sign${diff.toStringAsFixed(2)}% $arrow';
+            badgeBgColor = isUp ? const Color(0xFF1A2E20) : const Color(0xFF2E1A1D);
+            badgeTextColor = isUp ? const Color(0xFF3FB950) : const Color(0xFFF85149);
+          } else {
+            final isUp = rule.direction == AlertDirection.above;
+            badgeText = '${rule.direction == AlertDirection.above ? '≥' : '≤'} $target';
+            badgeBgColor = isUp ? const Color(0xFF1A2E20) : const Color(0xFF2E1A1D);
+            badgeTextColor = isUp ? const Color(0xFF3FB950) : const Color(0xFFF85149);
+          }
+          break;
+
+        case AlertConditionType.absolutePriceChange:
+          final base = rule.basePrice ?? currentPrice;
+          final diff = currentPrice - base;
+          final isUp = diff >= 0;
+          final sign = isUp ? '+' : '-';
+          final arrow = isUp ? '▲' : '▼';
+          badgeText = '$sign${FormatUtils.formatPrice(diff.abs(), currencySymbol: rule.pair.counterCurrency)} $arrow';
+          badgeBgColor = isUp ? const Color(0xFF1A2E20) : const Color(0xFF2E1A1D);
+          badgeTextColor = isUp ? const Color(0xFF3FB950) : const Color(0xFFF85149);
+          break;
+
+        case AlertConditionType.volumeChange:
+          badgeText = 'Vol ${rule.volumePercent}%';
+          badgeBgColor = const Color(0xFF21262D);
+          badgeTextColor = const Color(0xFF58A6FF);
+          break;
       }
     }
 
-    final isTriggered = rule.isTriggered;
-    final statusColor = !rule.isActive
-        ? Colors.grey
-        : (isTriggered
-            ? Colors.redAccent
-            : (progress >= 0.95 ? Colors.amber : theme.colorScheme.primary));
+    String infoText = '';
+    if (rule.customNote != null && rule.customNote!.trim().isNotEmpty) {
+      infoText = rule.customNote!.trim();
+    } else if (rule.targetPrice != null && rule.targetPrice! > 0) {
+      infoText = '${isFa ? 'هدف' : 'Target'}: ${FormatUtils.formatPrice(rule.targetPrice!, currencySymbol: rule.pair.counterCurrency)}';
+    } else if (rule.percent != null) {
+      infoText = '${isFa ? 'تغییر مرحله‌ای' : 'Step'}: ±${rule.percent}%';
+    } else {
+      infoText = isFa ? 'هشدار فعال' : 'Active Alert';
+    }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -223,92 +287,58 @@ class AlertHomeWidgetView extends StatelessWidget {
         children: [
           Row(
             children: [
-              // Symbol & Market
+              // Symbol
+              Text(
+                rule.pair.displayName,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(width: 8),
+
+              // Live Current Price next to symbol
               Expanded(
-                child: Row(
-                  children: [
-                    Text(
-                      rule.pair.baseCurrency,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                    ),
-                    Text(
-                      '/${rule.pair.counterCurrency}',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        rule.exchangeId.toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 8,
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.primary,
-                        ),
-                      ),
-                    ),
-                    if (rule.ttsEnabled) ...[
-                      const SizedBox(width: 4),
-                      Icon(Icons.record_voice_over_rounded, size: 12, color: theme.colorScheme.primary),
-                    ],
-                  ],
+                child: Text(
+                  formattedPrice,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    fontFamily: 'monospace',
+                    color: Color(0xFFF59E0B),
+                  ),
                 ),
               ),
 
-              // Live Current Price
-              Text(
-                currentPrice >= 1000
-                    ? NumberFormat('#,##0').format(currentPrice)
-                    : currentPrice.toStringAsFixed(currentPrice < 1 ? 4 : 2),
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  fontFamily: 'monospace',
-                  color: theme.colorScheme.onSurface,
+              // Status / % / Done Badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                decoration: BoxDecoration(
+                  color: badgeBgColor,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  badgeText,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: badgeTextColor,
+                  ),
                 ),
               ),
             ],
           ),
 
-          const SizedBox(height: 4),
+          const SizedBox(height: 3),
 
-          // Condition Target & Progress Bar
-          Row(
-            children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    minHeight: 4,
-                    backgroundColor: theme.colorScheme.onSurface.withValues(alpha: 0.08),
-                    valueColor: AlwaysStoppedAnimation<Color>(statusColor),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                rule.targetPrice != null
-                    ? '${rule.direction == AlertDirection.above ? '≥' : '≤'} \$${rule.targetPrice}'
-                    : '${rule.percent != null ? '${rule.percent}%' : ''}',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: statusColor,
-                ),
-              ),
-            ],
+          // Target note / info text (No exchange name)
+          Text(
+            infoText,
+            style: TextStyle(
+              fontSize: 10,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
           ),
         ],
       ),
