@@ -1,4 +1,4 @@
-import '../../core/utils/format_utils.dart';
+import '../../../core/utils/format_utils.dart';
 import '../models/alert_rule.dart';
 import '../models/trigger_mode.dart';
 

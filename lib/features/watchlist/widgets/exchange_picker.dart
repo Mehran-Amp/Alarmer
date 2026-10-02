@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../../../core/theme/tokens.dart';
+import '../../../core/theme/tokens.dart';
 import '../../exchanges/registry/exchange_registry.dart';
 
 /// Exchange selector widget that lets the user choose the price source

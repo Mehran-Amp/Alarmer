@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../../core/constants/strings.dart';
-import '../../../../core/localization/app_strings.dart';
-import '../../../../core/theme/tokens.dart';
+import '../../../core/constants/strings.dart';
+import '../../../core/localization/app_strings.dart';
+import '../../../core/theme/tokens.dart';
 import '../../settings/services/settings_service.dart';
 import '../models/alert_rule.dart';
 import '../models/alert_type.dart';

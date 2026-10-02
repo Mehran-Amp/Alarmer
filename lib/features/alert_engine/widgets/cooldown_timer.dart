@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import '../../../../core/constants/strings.dart';
-import '../../../../core/theme/tokens.dart';
+import '../../../core/constants/strings.dart';
+import '../../../core/theme/tokens.dart';
 
 /// Dedicated, self-rebuilding countdown timer for rules in the 3-minute cooldown period.
 /// Rebuilds only itself every second without causing parent list or row rebuilds.

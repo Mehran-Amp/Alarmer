@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../../core/constants/strings.dart';
-import '../../../../core/localization/app_strings.dart';
-import '../../../../core/theme/tokens.dart';
-import '../../../../core/utils/crypto_icons.dart';
-import '../../../../core/utils/format_utils.dart';
+import '../../../core/constants/strings.dart';
+import '../../../core/localization/app_strings.dart';
+import '../../../core/theme/tokens.dart';
+import '../../../core/utils/crypto_icons.dart';
+import '../../../core/utils/format_utils.dart';
 import '../../alert_engine/models/alert_rule.dart';
 import '../../alert_engine/models/trigger_mode.dart';
 import '../../alert_engine/repositories/json_alert_rule_repository.dart';

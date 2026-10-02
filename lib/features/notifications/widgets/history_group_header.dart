@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../../core/localization/app_strings.dart';
-import '../../../../core/theme/tokens.dart';
+import '../../../core/localization/app_strings.dart';
+import '../../../core/theme/tokens.dart';
 
 /// Group header for separating notification logs by day (Today, Yesterday, or MMM d, yyyy).
 class HistoryGroupHeader extends StatelessWidget {

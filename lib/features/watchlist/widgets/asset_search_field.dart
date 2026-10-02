@@ -1,9 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../../core/localization/app_strings.dart';
-import '../../../../core/theme/tokens.dart';
-import '../../../../core/utils/crypto_icons.dart';
+import '../../../core/localization/app_strings.dart';
+import '../../../core/theme/tokens.dart';
+import '../../../core/utils/crypto_icons.dart';
 import '../../exchanges/base/currency_pair.dart';
 import '../../exchanges/registry/exchange_registry.dart';
 import '../../settings/services/settings_service.dart';
