@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import 'app/navigation/app_shell.dart';
 import 'core/localization/app_strings.dart';
+import 'core/services/native_widget_sync_service.dart';
 import 'features/alert_engine/bloc/alert_rules_bloc.dart';
 import 'features/alert_engine/bloc/alert_rules_event.dart';
 import 'features/alert_engine/repositories/json_alert_rule_repository.dart';
@@ -36,6 +37,12 @@ void main() async {
 
   final settingsService = SettingsService(dir.path);
   await settingsService.load();
+
+  // Sync initial widget state with loaded alerts and active theme
+  await NativeWidgetSyncService.syncAlerts(
+    alertRuleRepository.allRules,
+    themePalette: settingsService.settings.themePalette,
+  );
 
   // 4. Initialize Central Exchange Registry (inspired by BitcoinChecker DataModule)
   final exchangeRegistry = ExchangeRegistry();

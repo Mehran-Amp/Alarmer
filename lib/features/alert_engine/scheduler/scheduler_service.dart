@@ -8,6 +8,7 @@ import '../models/alert_rule.dart';
 import '../repositories/json_alert_rule_repository.dart';
 import 'condition_evaluator.dart';
 import '../../../core/services/native_widget_sync_service.dart';
+import '../../../core/services/tts_service.dart';
 
 /// Personal Price-Alert Polling Scheduler Service.
 /// Wakes up on a 1-second fine tick, checks which individual alert rules are due
@@ -110,6 +111,17 @@ class SchedulerService {
           soundEnabled: rule.soundEnabled,
           vibrationEnabled: rule.vibrationEnabled,
         );
+
+        // Vocalize speech if TTS enabled for this rule
+        if (rule.ttsEnabled) {
+          final speechText = TtsService.buildAlertSpeech(
+            symbol: rule.pair.displayName,
+            price: ticker.lastPrice,
+            lang: rule.language ?? 'en',
+            customNote: rule.note,
+          );
+          unawaited(TtsService.instance.speak(text: speechText, lang: rule.language ?? 'en'));
+        }
 
         // Save notification log
         if (_notificationRepository != null) {

@@ -2,6 +2,7 @@ import '../base/currency_pair.dart';
 import '../base/currency_pairs_helper.dart';
 import '../base/exchange.dart';
 import '../base/models/price_snapshot.dart';
+import '../../../core/utils/symbol_filter_helper.dart';
 
 /// Central Exchange Registry (inspired by aneonex/BitcoinChecker).
 /// Manages all registered exchanges, handles dynamic pair discovery,
@@ -72,21 +73,16 @@ class ExchangeRegistry {
     return pairs;
   }
 
-  /// Cross-exchange search: Finds matching currency pairs across all registered exchanges
+  /// Cross-exchange search: Finds matching currency pairs across all registered exchanges with startsWith prioritization
   Future<Map<String, List<CurrencyPair>>> searchPairsAcrossExchanges(String query) async {
-    final cleanQuery = query.trim().toUpperCase();
+    final cleanQuery = query.trim();
     final results = <String, List<CurrencyPair>>{};
 
     for (final exchange in _exchanges.values) {
       if (exchange.id == 'global_stocks') continue;
       try {
         final pairs = await getCurrencyPairs(exchange.id);
-        final matched = pairs.where((p) {
-          if (cleanQuery.isEmpty) return true;
-          return p.baseCurrency.toUpperCase().contains(cleanQuery) ||
-              p.counterCurrency.toUpperCase().contains(cleanQuery) ||
-              p.marketSymbol.toUpperCase().contains(cleanQuery);
-        }).take(50).toList();
+        final matched = SymbolFilterHelper.filterAndSort(pairs, cleanQuery).take(50).toList();
 
         if (matched.isNotEmpty) {
           results[exchange.id] = matched;

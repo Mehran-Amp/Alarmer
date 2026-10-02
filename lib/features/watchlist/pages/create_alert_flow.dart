@@ -15,6 +15,7 @@ import '../../exchanges/stocks/global_stocks_exchange.dart';
 import '../../settings/services/settings_service.dart';
 import '../../settings/services/sound_manager.dart';
 import '../../../core/services/tts_service.dart';
+import '../../../core/utils/symbol_filter_helper.dart';
 
 enum CheckUnit { seconds, minutes, hours }
 
@@ -783,17 +784,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
   }
 
   Widget _buildCryptoPairPicker(ThemeData theme, String lang) {
-    final filtered = _exchangePairs.where((p) {
-      final q = _pairSearchQuery.trim().toUpperCase();
-      if (q.isEmpty) return true;
-      final assetName = CryptoIcons.getName(p.baseCurrency).toUpperCase();
-      final aliases = CryptoIcons.getAliases(p.baseCurrency).toUpperCase();
-      return p.baseCurrency.toUpperCase().contains(q) ||
-          p.counterCurrency.toUpperCase().contains(q) ||
-          p.marketSymbol.toUpperCase().contains(q) ||
-          assetName.contains(q) ||
-          aliases.contains(q);
-    }).toList();
+    final filtered = SymbolFilterHelper.filterAndSort(_exchangePairs, _pairSearchQuery);
 
     return Column(
       children: [

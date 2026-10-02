@@ -1,4 +1,5 @@
 import 'currency_pair.dart';
+import '../../../core/utils/symbol_filter_helper.dart';
 
 /// Currency Pairs Map Helper (Direct Dart port of BitcoinChecker CurrencyPairsMapHelper)
 /// Provides structured querying, base/quote asset extraction, and instant filtering.
@@ -55,16 +56,8 @@ class CurrencyPairsHelper {
     return null;
   }
 
-  /// Fast search for pairs matching a user's text query
+  /// Fast search for pairs matching a user's text query with startsWith prioritization
   List<CurrencyPair> search(String query) {
-    final q = query.trim().toUpperCase();
-    if (q.isEmpty) return pairs;
-
-    return pairs.where((p) {
-      return p.baseCurrency.toUpperCase().contains(q) ||
-          p.counterCurrency.toUpperCase().contains(q) ||
-          p.marketSymbol.toUpperCase().contains(q) ||
-          p.displayName.toUpperCase().contains(q);
-    }).toList();
+    return SymbolFilterHelper.filterAndSort(pairs, query);
   }
 }

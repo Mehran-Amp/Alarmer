@@ -11,6 +11,7 @@ import '../../notifications/services/notification_service.dart';
 import '../models/app_settings.dart';
 import '../services/settings_service.dart';
 import '../services/sound_manager.dart';
+import '../../../core/services/tts_service.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -796,23 +797,56 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 const SizedBox(height: 10),
 
-                // 4. Test Alarm Button
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () => _testAlarm(context, lang),
-                    icon: const Icon(Icons.notifications_active_rounded),
-                    label: Text(
-                      isFa ? 'تست صدای آلارم و نوتیفیکیشن' : AppStrings.get('test_sound_button', lang),
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                // 4. Test Alarm & Voice Speech Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _testAlarm(context, lang),
+                        icon: const Icon(Icons.notifications_active_rounded, size: 16),
+                        label: Text(
+                          isFa ? 'تست زنگ هشدار' : 'Test Alarm',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.colorScheme.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
                     ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.colorScheme.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () async {
+                          await TtsService.instance.testVoice(lang);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(isFa ? 'در حال پخش گفتار صوتی فارسی...' : 'Speaking test voice speech...'),
+                                backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                                behavior: SnackBarBehavior.floating,
+                                duration: const Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.record_voice_over_rounded, size: 16),
+                        label: Text(
+                          isFa ? 'تست گفتار صوتی' : 'Test Voice',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: theme.colorScheme.primary,
+                          side: BorderSide(color: theme.colorScheme.primary),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),
