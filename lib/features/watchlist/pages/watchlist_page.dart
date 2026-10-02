@@ -12,7 +12,7 @@ import '../../alert_engine/repositories/json_alert_rule_repository.dart';
 import '../../alert_engine/scheduler/scheduler_service.dart';
 import '../../exchanges/registry/exchange_registry.dart';
 import '../../settings/services/settings_service.dart';
-import '../widgets/alert_home_widget.dart';
+import '../../widgets/alert_home_widget.dart';
 import 'create_alert_flow.dart';
 
 /// The Main Screen of Alarmer: Personal Price Alerts.
