@@ -155,7 +155,7 @@ class AlertHomeWidgetView extends StatelessWidget {
           else
             ListView.separated(
               shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics),
+              physics: const NeverScrollableScrollPhysics(),
               itemCount: isCompact ? allRules.take(3).length : allRules.take(5).length,
               separatorBuilder: (_, __) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
