@@ -24,6 +24,7 @@
             android:id="@+id/widget_header_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginLeft="6dp"
             android:layout_marginStart="6dp"
             android:layout_weight="1"
             android:text="Alarmer Live"
@@ -36,8 +37,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:background="@drawable/widget_badge_bg"
+            android:paddingLeft="8dp"
             android:paddingStart="8dp"
             android:paddingTop="2dp"
+            android:paddingRight="8dp"
             android:paddingEnd="8dp"
             android:paddingBottom="2dp"
             android:text="⚡ 0 Active"
@@ -46,7 +49,7 @@
             android:textStyle="bold" />
     </LinearLayout>
 
-    <View
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="#21262D" />
@@ -89,6 +92,7 @@
                     android:id="@+id/item_1_price"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_marginLeft="8dp"
                     android:layout_marginStart="8dp"
                     android:layout_weight="1"
                     android:text="$87,420.00"
@@ -101,8 +105,10 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="@drawable/widget_badge_bg"
+                    android:paddingLeft="6dp"
                     android:paddingStart="6dp"
                     android:paddingTop="2dp"
+                    android:paddingRight="6dp"
                     android:paddingEnd="6dp"
                     android:paddingBottom="2dp"
                     android:text="+2.50% ▲"
@@ -152,6 +158,7 @@
                     android:id="@+id/item_2_price"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_marginLeft="8dp"
                     android:layout_marginStart="8dp"
                     android:layout_weight="1"
                     android:text="$3,150.00"
@@ -164,8 +171,10 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="@drawable/widget_badge_bg"
+                    android:paddingLeft="6dp"
                     android:paddingStart="6dp"
                     android:paddingTop="2dp"
+                    android:paddingRight="6dp"
                     android:paddingEnd="6dp"
                     android:paddingBottom="2dp"
                     android:text="-1.20% ▼"
@@ -215,6 +224,7 @@
                     android:id="@+id/item_3_price"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
+                    android:layout_marginLeft="8dp"
                     android:layout_marginStart="8dp"
                     android:layout_weight="1"
                     android:text="$185.20"
@@ -227,8 +237,10 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:background="@drawable/widget_badge_bg"
+                    android:paddingLeft="6dp"
                     android:paddingStart="6dp"
                     android:paddingTop="2dp"
+                    android:paddingRight="6dp"
                     android:paddingEnd="6dp"
                     android:paddingBottom="2dp"
                     android:text="✔️ Done"
@@ -263,7 +275,7 @@
             android:visibility="gone" />
     </LinearLayout>
 
-    <View
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="#21262D" />

@@ -715,7 +715,7 @@ class _WatchlistPageState extends State<WatchlistPage> {
       }
       return isFa ? '$m دقیقه و $s ثانیه تا بررسی' : 'In ${m}m ${s}s';
     } else {
-      return isFa ? '${diff.inSeconds} ثانیه تا بررسی' : 'In ${diff.inSeconds}s';
+      return 'In ${diff.inSeconds} s';
     }
   }
 
