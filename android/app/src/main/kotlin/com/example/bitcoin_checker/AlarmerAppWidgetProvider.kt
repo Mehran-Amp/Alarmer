@@ -12,11 +12,11 @@ import org.json.JSONObject
 
 /**
  * Native Android Home Screen AppWidget Provider for Alarmer.
- * Clean, card-based layout matching in-app widget preview:
- * - English labels
- * - Distinct elevated card rows with monospace gold prices
- * - Condition target / status badges
- * - Exact alert ordering
+ * - Dynamic theme & background contrast matching active app theme (light, dark, amoled)
+ * - Exact alert order
+ * - Pure percentage change + arrow (+X.XX% ▲ / -X.XX% ▼)
+ * - Dynamic compact height wrapping around active alerts
+ * - 100% RemoteViews safe
  */
 class AlarmerAppWidgetProvider : AppWidgetProvider() {
 
@@ -39,7 +39,7 @@ class AlarmerAppWidgetProvider : AppWidgetProvider() {
             try {
                 val views = RemoteViews(context.packageName, R.layout.alarmer_appwidget_layout)
 
-                // Tap to open app
+                // Intent to open main app on widget click
                 val intent = Intent(context, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 }
@@ -64,19 +64,29 @@ class AlarmerAppWidgetProvider : AppWidgetProvider() {
                         val root = JSONObject(jsonStr)
                         val activeCount = root.optInt("activeCount", 0)
                         val headerTitle = root.optString("title", "Alarmer Live Widget")
+                        val subtitle = root.optString("subtitle", "$activeCount active alerts • Live")
                         val footerText = root.optString("footerText", "Tap to open Alarmer")
                         val items = root.optJSONArray("items")
                         val themeObj = root.optJSONObject("theme")
 
-                        // Colors from theme
-                        val primaryColor = themeObj?.optLong("primary", 0xFF10B981)?.toInt() ?: 0xFF10B981.toInt()
-                        val textPrimaryColor = themeObj?.optLong("textPrimary", 0xFFF9FAFB)?.toInt() ?: 0xFFF9FAFB.toInt()
-                        val textSecondaryColor = themeObj?.optLong("textSecondary", 0xFF9CA3AF)?.toInt() ?: 0xFF9CA3AF.toInt()
+                        // Active Theme Colors
+                        val isDark = themeObj?.optInt("isDark", 1) == 1
+                        val primaryColor = themeObj?.optLong("primary", if (isDark) 0xFF10B981 else 0xFF059669)?.toInt()
+                            ?: if (isDark) 0xFF10B981.toInt() else 0xFF059669.toInt()
+                        val textPrimaryColor = themeObj?.optLong("textPrimary", if (isDark) 0xFFF9FAFB else 0xFF111827)?.toInt()
+                            ?: if (isDark) 0xFFF9FAFB.toInt() else 0xFF111827.toInt()
+                        val textSecondaryColor = themeObj?.optLong("textSecondary", if (isDark) 0xFF9CA3AF else 0xFF4B5563)?.toInt()
+                            ?: if (isDark) 0xFF9CA3AF.toInt() else 0xFF4B5563.toInt()
+                        val borderColor = themeObj?.optLong("border", if (isDark) 0xFF374151 else 0xFFD1D5DB)?.toInt()
+                            ?: if (isDark) 0xFF374151.toInt() else 0xFFD1D5DB.toInt()
+                        val priceColor = themeObj?.optLong("price", if (isDark) 0xFFF59E0B else 0xFFD97706)?.toInt()
+                            ?: if (isDark) 0xFFF59E0B.toInt() else 0xFFD97706.toInt()
 
+                        // Header & Dividers styling
                         views.setTextViewText(R.id.widget_header_title, headerTitle)
                         views.setTextColor(R.id.widget_header_title, textPrimaryColor)
 
-                        views.setTextViewText(R.id.widget_subtitle, "$activeCount active alerts • Live")
+                        views.setTextViewText(R.id.widget_subtitle, subtitle)
                         views.setTextColor(R.id.widget_subtitle, textSecondaryColor)
 
                         views.setTextViewText(R.id.widget_active_badge, "⚡ LIVE")
@@ -84,6 +94,9 @@ class AlarmerAppWidgetProvider : AppWidgetProvider() {
 
                         views.setTextViewText(R.id.widget_footer_text, footerText)
                         views.setTextColor(R.id.widget_footer_text, primaryColor)
+
+                        views.setInt(R.id.widget_divider_1, "setBackgroundColor", borderColor)
+                        views.setInt(R.id.widget_divider_2, "setBackgroundColor", borderColor)
 
                         val count = items?.length() ?: 0
                         if (count == 0) {
@@ -101,26 +114,24 @@ class AlarmerAppWidgetProvider : AppWidgetProvider() {
                                     val price = item.optString("price", "—")
                                     val badge = item.optString("badge", "—")
                                     val isDone = item.optBoolean("isDone", false)
-                                    val isPositive = item.optBoolean("isPositive", false)
-                                    val isNegative = item.optBoolean("isNegative", false)
+                                    val isPositive = item.optBoolean("isPositive", true)
 
                                     views.setViewVisibility(rowRoots[i], View.VISIBLE)
                                     views.setTextViewText(rowSymbols[i], symbol)
                                     views.setTextColor(rowSymbols[i], textPrimaryColor)
 
                                     views.setTextViewText(rowPrices[i], price)
-                                    views.setTextColor(rowPrices[i], 0xFFF59E0B.toInt()) // Gold price
+                                    views.setTextColor(rowPrices[i], priceColor)
 
                                     views.setTextViewText(rowBadges[i], badge)
 
+                                    // Badge contrast color
                                     if (isDone) {
-                                        views.setTextColor(rowBadges[i], 0xFFE3B341.toInt())
+                                        views.setTextColor(rowBadges[i], if (isDark) 0xFFE3B341.toInt() else 0xFFD97706.toInt())
                                     } else if (isPositive) {
-                                        views.setTextColor(rowBadges[i], 0xFF3FB950.toInt())
-                                    } else if (isNegative) {
-                                        views.setTextColor(rowBadges[i], 0xFFF85149.toInt())
+                                        views.setTextColor(rowBadges[i], if (isDark) 0xFF3FB950.toInt() else 0xFF16A34A.toInt())
                                     } else {
-                                        views.setTextColor(rowBadges[i], primaryColor)
+                                        views.setTextColor(rowBadges[i], if (isDark) 0xFFF85149.toInt() else 0xFFDC2626.toInt())
                                     }
                                 } else {
                                     views.setViewVisibility(rowRoots[i], View.GONE)
@@ -134,7 +145,7 @@ class AlarmerAppWidgetProvider : AppWidgetProvider() {
                         }
                     }
                 } else {
-                    // Default preview fallback
+                    // Default fallback
                     views.setTextViewText(R.id.widget_header_title, "Alarmer Live Widget")
                     views.setTextViewText(R.id.widget_subtitle, "1 active alert • Live")
                     views.setTextViewText(R.id.widget_active_badge, "⚡ LIVE")
@@ -144,7 +155,7 @@ class AlarmerAppWidgetProvider : AppWidgetProvider() {
                     views.setViewVisibility(R.id.widget_empty_text, View.GONE)
                     views.setTextViewText(R.id.item_1_symbol, "BTC/USDT")
                     views.setTextViewText(R.id.item_1_price, "$87,420.00")
-                    views.setTextViewText(R.id.item_1_badge, "≥ $90,000")
+                    views.setTextViewText(R.id.item_1_badge, "+3.45% ▲")
                     views.setTextColor(R.id.item_1_badge, 0xFF3FB950.toInt())
                 }
 

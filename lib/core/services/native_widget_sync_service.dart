@@ -8,9 +8,9 @@ import '../utils/format_utils.dart';
 /// Service that serializes active alerts and active app theme to the Native Android Home Screen Widget.
 /// - Preserves exact alert order from app
 /// - Always in English
-/// - No notes/info lines
-/// - No percentage change (displays condition target or status directly)
-/// - Synchronizes widget colors with selected app theme palette dynamically
+/// - Pure percentage change + arrow (+X.XX% ▲ / -X.XX% ▼)
+/// - Height wraps content smoothly based on number of active alerts
+/// - Synchronizes widget colors & contrast with selected app theme palette dynamically
 class NativeWidgetSyncService {
   static const _channel = MethodChannel('com.example.bitcoin_checker/app_lifecycle');
 
@@ -41,45 +41,34 @@ class NativeWidgetSyncService {
         final isDone = isOneShot && (!rule.isActive || rule.isTriggered);
 
         String badgeText;
-        bool? isPositive;
+        bool isPositive = true;
 
         if (isDone) {
           badgeText = '✔️ Done';
           isPositive = true;
         } else {
-          switch (rule.conditionType) {
-            case AlertConditionType.priceThreshold:
-              final target = rule.targetPrice ?? 0.0;
-              final isUp = rule.direction == AlertDirection.above;
-              isPositive = isUp;
-              badgeText = '${isUp ? '≥' : '≤'} ${FormatUtils.formatPrice(target, currencySymbol: rule.pair.counterCurrency)}';
-              break;
-
-            case AlertConditionType.percentChange:
-              final isUp = rule.direction == AlertDirection.above;
-              isPositive = isUp;
-              badgeText = '${isUp ? '▲' : '▼'} Step';
-              break;
-
-            case AlertConditionType.absolutePriceChange:
-              final isUp = rule.direction == AlertDirection.above;
-              isPositive = isUp;
-              badgeText = '${isUp ? '▲' : '▼'} Move';
-              break;
-
-            case AlertConditionType.volumeChange:
-              isPositive = rule.direction == AlertDirection.above;
-              badgeText = 'Vol';
-              break;
+          // Calculate percentage change since last check or base price
+          final base = rule.basePrice ?? currentPrice;
+          double diffPct = 0.0;
+          if (base > 0 && currentPrice > 0) {
+            diffPct = ((currentPrice - base) / base) * 100.0;
+          } else if (rule.percent != null) {
+            diffPct = rule.percent!;
           }
+
+          final isUp = diffPct >= 0;
+          isPositive = isUp;
+          final sign = isUp ? '+' : '';
+          final arrow = isUp ? '▲' : '▼';
+          badgeText = '$sign${diffPct.toStringAsFixed(2)}% $arrow';
         }
 
         return {
           'symbol': symbol,
           'price': formattedPrice,
           'badge': badgeText,
-          'isPositive': isPositive == true,
-          'isNegative': isPositive == false,
+          'isPositive': isPositive,
+          'isNegative': !isPositive && !isDone,
           'isDone': isDone,
           'isActive': rule.isActive,
         };
@@ -91,6 +80,7 @@ class NativeWidgetSyncService {
       final payload = {
         'activeCount': activeCount,
         'title': 'Alarmer Live Widget',
+        'subtitle': '$activeCount active alerts • Live',
         'footerText': 'Tap to open Alarmer',
         'theme': themeColors,
         'items': items,
@@ -110,7 +100,7 @@ class NativeWidgetSyncService {
     await syncAlerts(_cachedRules, themePalette: palette);
   }
 
-  static Map<String, int> _getPaletteColors(AppThemePalette palette) {
+  static Map<String, dynamic> _getPaletteColors(AppThemePalette palette) {
     switch (palette) {
       case AppThemePalette.darkGreen:
         return {
@@ -120,6 +110,7 @@ class NativeWidgetSyncService {
           'textPrimary': 0xFFF9FAFB,
           'textSecondary': 0xFF9CA3AF,
           'border': 0xFF374151,
+          'price': 0xFFF59E0B,
           'isDark': 1,
         };
       case AppThemePalette.lightGreen:
@@ -130,6 +121,7 @@ class NativeWidgetSyncService {
           'textPrimary': 0xFF111827,
           'textSecondary': 0xFF4B5563,
           'border': 0xFFD1D5DB,
+          'price': 0xFFD97706,
           'isDark': 0,
         };
       case AppThemePalette.darkOrange:
@@ -140,6 +132,7 @@ class NativeWidgetSyncService {
           'textPrimary': 0xFFFAFAF9,
           'textSecondary': 0xFFA8A29E,
           'border': 0xFF44403C,
+          'price': 0xFFF59E0B,
           'isDark': 1,
         };
       case AppThemePalette.lightOrange:
@@ -150,6 +143,7 @@ class NativeWidgetSyncService {
           'textPrimary': 0xFF1C1917,
           'textSecondary': 0xFF78716C,
           'border': 0xFFE7E5E4,
+          'price': 0xFFD97706,
           'isDark': 0,
         };
       case AppThemePalette.darkPurpleBlue:
@@ -160,6 +154,7 @@ class NativeWidgetSyncService {
           'textPrimary': 0xFFF8FAFC,
           'textSecondary': 0xFF94A3B8,
           'border': 0xFF2E365E,
+          'price': 0xFFF59E0B,
           'isDark': 1,
         };
       case AppThemePalette.lightPurpleBlue:
@@ -170,6 +165,7 @@ class NativeWidgetSyncService {
           'textPrimary': 0xFF0F172A,
           'textSecondary': 0xFF475569,
           'border': 0xFFD6DBF5,
+          'price': 0xFFD97706,
           'isDark': 0,
         };
     }

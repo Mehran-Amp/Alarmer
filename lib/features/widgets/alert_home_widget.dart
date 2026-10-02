@@ -6,8 +6,8 @@ import '../alert_engine/repositories/json_alert_rule_repository.dart';
 import '../../core/utils/format_utils.dart';
 
 /// Interactive Home Screen Widget representation for Alarmer.
-/// Displays active market alerts, live ticker prices, target proximity, and quick actions.
-/// Always rendered in English with exact app alert order, no percentage change, and no notes.
+/// Displays active market alerts, live ticker prices, percentage change, and quick actions.
+/// Always rendered in English with exact app alert order, real percentage + arrow, and dynamic theme contrast.
 class AlertHomeWidgetView extends StatelessWidget {
   final JsonAlertRuleRepository repository;
   final String lang;
@@ -29,32 +29,32 @@ class AlertHomeWidgetView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // Keep exact order from the app
+    final isDark = theme.brightness == Brightness.dark;
     final allRules = repository.allRules;
     final activeRules = allRules.where((r) => r.isActive).toList();
 
     return Container(
       decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: theme.colorScheme.primary.withValues(alpha: 0.25),
-          width: 1.5,
+          color: theme.dividerColor,
+          width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.primary.withValues(alpha: 0.08),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+            color: theme.shadowColor.withValues(alpha: isDark ? 0.2 : 0.06),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Widget Header (Always English)
+          // Widget Header (Always English, High Contrast)
           Row(
             children: [
               Container(
@@ -86,18 +86,22 @@ class AlertHomeWidgetView extends StatelessWidget {
                       '${activeRules.length} active alerts • ${DateFormat('HH:mm').format(DateTime.now())}',
                       style: TextStyle(
                         fontSize: 10,
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                        color: theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurface.withValues(alpha: 0.6),
                       ),
                     ),
                   ],
                 ),
               ),
-              // Live Pulse Indicator
+              // Live Indicator Pill
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                    width: 1,
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -135,20 +139,20 @@ class AlertHomeWidgetView extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 10),
-          Divider(height: 1, color: theme.dividerColor.withValues(alpha: 0.5)),
+          const SizedBox(height: 8),
+          Divider(height: 1, color: theme.dividerColor),
           const SizedBox(height: 8),
 
-          // Alerts List in Widget (Exact order, no percentage change, no notes)
+          // Alerts List in Widget
           if (allRules.isEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.symmetric(vertical: 14),
               child: Center(
                 child: Text(
-                  'No alerts configured yet',
+                  'No active alerts configured',
                   style: TextStyle(
                     fontSize: 12,
-                    color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                    color: theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurface.withValues(alpha: 0.5),
                   ),
                 ),
               ),
@@ -161,18 +165,18 @@ class AlertHomeWidgetView extends StatelessWidget {
               separatorBuilder: (_, __) => const SizedBox(height: 6),
               itemBuilder: (context, index) {
                 final rule = allRules[index];
-                return _buildWidgetAlertRow(context, rule, theme);
+                return _buildWidgetAlertRow(context, rule, theme, isDark);
               },
             ),
 
           if (allRules.length > (isCompact ? 3 : 5)) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Center(
               child: Text(
                 '+ ${allRules.length - (isCompact ? 3 : 5)} more alerts in background',
                 style: TextStyle(
                   fontSize: 10,
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                  color: theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurface.withValues(alpha: 0.5),
                 ),
               ),
             ),
@@ -186,6 +190,7 @@ class AlertHomeWidgetView extends StatelessWidget {
     BuildContext context,
     AlertRule rule,
     ThemeData theme,
+    bool isDark,
   ) {
     final currentPrice = rule.lastCheckedPrice ?? rule.basePrice ?? 0.0;
     final formattedPrice = currentPrice > 0
@@ -202,48 +207,44 @@ class AlertHomeWidgetView extends StatelessWidget {
 
     if (isDone) {
       badgeText = '✔️ Done';
-      badgeBgColor = const Color(0xFF2B2410);
-      badgeTextColor = const Color(0xFFE3B341); // Gold
+      badgeBgColor = isDark ? const Color(0xFF2B2410) : const Color(0xFFFEF3C7);
+      badgeTextColor = isDark ? const Color(0xFFE3B341) : const Color(0xFFD97706);
     } else {
-      switch (rule.conditionType) {
-        case AlertConditionType.priceThreshold:
-          final target = rule.targetPrice ?? 0.0;
-          final isUp = rule.direction == AlertDirection.above;
-          badgeText = '${isUp ? '≥' : '≤'} ${FormatUtils.formatPrice(target, currencySymbol: rule.pair.counterCurrency)}';
-          badgeBgColor = isUp ? const Color(0xFF1A2E20) : const Color(0xFF2E1A1D);
-          badgeTextColor = isUp ? const Color(0xFF3FB950) : const Color(0xFFF85149);
-          break;
+      // Calculate real percentage change from base / last checked price
+      final base = rule.basePrice ?? currentPrice;
+      double diffPct = 0.0;
+      if (base > 0 && currentPrice > 0) {
+        diffPct = ((currentPrice - base) / base) * 100.0;
+      } else if (rule.percent != null) {
+        diffPct = rule.percent!;
+      }
 
-        case AlertConditionType.percentChange:
-          final isUp = rule.direction == AlertDirection.above;
-          badgeText = '${isUp ? '▲' : '▼'} Step';
-          badgeBgColor = const Color(0xFF21262D);
-          badgeTextColor = theme.colorScheme.primary;
-          break;
+      final isUp = diffPct >= 0;
+      final sign = isUp ? '+' : '';
+      final arrow = isUp ? '▲' : '▼';
+      badgeText = '$sign${diffPct.toStringAsFixed(2)}% $arrow';
 
-        case AlertConditionType.absolutePriceChange:
-          final isUp = rule.direction == AlertDirection.above;
-          badgeText = '${isUp ? '▲' : '▼'} Move';
-          badgeBgColor = const Color(0xFF21262D);
-          badgeTextColor = theme.colorScheme.primary;
-          break;
-
-        case AlertConditionType.volumeChange:
-          badgeText = 'Vol';
-          badgeBgColor = const Color(0xFF21262D);
-          badgeTextColor = theme.colorScheme.primary;
-          break;
+      if (isUp) {
+        badgeBgColor = isDark ? const Color(0xFF1A2E20) : const Color(0xFFDCFCE7);
+        badgeTextColor = isDark ? const Color(0xFF3FB950) : const Color(0xFF15803D);
+      } else {
+        badgeBgColor = isDark ? const Color(0xFF2E1A1D) : const Color(0xFFFEE2E2);
+        badgeTextColor = isDark ? const Color(0xFFF85149) : const Color(0xFFB91C1C);
       }
     }
 
-    // Clean single-line row: Symbol, Price, Condition Badge (No notes line)
+    final priceColor = isDark ? const Color(0xFFF59E0B) : const Color(0xFFD97706);
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: theme.scaffoldBackgroundColor.withValues(alpha: 0.6),
+        color: isDark
+            ? theme.scaffoldBackgroundColor.withValues(alpha: 0.7)
+            : theme.scaffoldBackgroundColor,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.08),
+          color: theme.dividerColor.withValues(alpha: 0.8),
+          width: 1,
         ),
       ),
       child: Row(
@@ -263,16 +264,16 @@ class AlertHomeWidgetView extends StatelessWidget {
           Expanded(
             child: Text(
               formattedPrice,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w800,
                 fontFamily: 'monospace',
-                color: Color(0xFFF59E0B),
+                color: priceColor,
               ),
             ),
           ),
 
-          // Condition / Done Badge (No percentage change)
+          // Percentage + Arrow Badge
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
             decoration: BoxDecoration(
