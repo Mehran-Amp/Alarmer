@@ -1659,7 +1659,7 @@ class _CreateAlertFlowState extends State<CreateAlertFlow> {
                             ? Alignment.centerLeft
                             : Alignment.centerRight,
                         child: OutlinedButton.icon(
-                          onPressed: () => TtsService.instance.testVoice(lang),
+                          onPressed: () => TtsService.instance.testVoice(),
                           icon: const Icon(Icons.volume_up_rounded, size: 14),
                           label: Text(
                             AppStrings.get('tts_test_button', lang),

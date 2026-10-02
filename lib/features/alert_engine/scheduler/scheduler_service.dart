@@ -112,18 +112,16 @@ class SchedulerService {
           vibrationEnabled: rule.vibrationEnabled,
         );
 
-        // Vocalize speech if TTS enabled for this rule
+        // Vocalize speech if TTS enabled for this rule (Always in English)
         if (rule.ttsEnabled) {
-          final targetLang = rule.language ?? 'fa';
           final speechText = TtsService.buildAlertSpeech(
             symbol: rule.pair.displayName,
             baseCurrency: rule.baseCurrency,
             counterCurrency: rule.counterCurrency,
             price: ticker.lastPrice,
-            lang: targetLang,
             customNote: rule.note,
           );
-          unawaited(TtsService.instance.speak(text: speechText, lang: targetLang));
+          unawaited(TtsService.instance.speak(text: speechText, lang: 'en'));
         }
 
         // Save notification log

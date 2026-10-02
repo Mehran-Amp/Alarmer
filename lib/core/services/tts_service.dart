@@ -1,300 +1,285 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
-import '../utils/crypto_icons.dart';
 
 /// Text-to-Speech (TTS) Voice Announcer Service.
-/// Generates and vocalizes natural spoken market voice announcements for critical trade alerts.
-/// Structure: [Symbol] + [Current Price text] + [Price + Currency] (+ Optional Custom Note)
+/// Always vocalizes in English with clean, clear pronunciation.
+///
+/// Reading Pattern:
+/// [Asset Name] [Price] [Currency] (+ [Optional Note])
+///
+/// Famous assets are spoken with their full authentic name (e.g. Bitcoin, Ethereum, Apple, Gold).
+/// Unlisted tickers are pronounced letter-by-letter (e.g. "W I F", "O N D O").
 class TtsService {
   static final TtsService instance = TtsService._();
   TtsService._();
 
   static const MethodChannel _channel = MethodChannel('com.example.bitcoin_checker/app_lifecycle');
 
-  /// Formats natural language voice sentence for an alert across all supported app languages
+  // Comprehensive Pronunciation Dictionary for Famous Assets
+  static const Map<String, String> _famousAssetNames = {
+    // 1. Top Cryptocurrencies
+    'BTC': 'Bitcoin',
+    'XBT': 'Bitcoin',
+    'BITCOIN': 'Bitcoin',
+    'ETH': 'Ethereum',
+    'ETHEREUM': 'Ethereum',
+    'SOL': 'Solana',
+    'SOLANA': 'Solana',
+    'BNB': 'BNB',
+    'XRP': 'Ripple',
+    'RIPPLE': 'Ripple',
+    'DOGE': 'Dogecoin',
+    'DOGECOIN': 'Dogecoin',
+    'ADA': 'Cardano',
+    'CARDANO': 'Cardano',
+    'AVAX': 'Avalanche',
+    'AVALANCHE': 'Avalanche',
+    'DOT': 'Polkadot',
+    'POLKADOT': 'Polkadot',
+    'TON': 'Toncoin',
+    'TONCOIN': 'Toncoin',
+    'SUI': 'Sui',
+    'APT': 'Aptos',
+    'APTOS': 'Aptos',
+    'NEAR': 'Near Protocol',
+    'LINK': 'Chainlink',
+    'CHAINLINK': 'Chainlink',
+    'TRX': 'Tron',
+    'TRON': 'Tron',
+    'LTC': 'Litecoin',
+    'LITECOIN': 'Litecoin',
+    'BCH': 'Bitcoin Cash',
+    'UNI': 'Uniswap',
+    'UNISWAP': 'Uniswap',
+    'ATOM': 'Cosmos',
+    'COSMOS': 'Cosmos',
+    'TIA': 'Celestia',
+    'CELESTIA': 'Celestia',
+    'SEI': 'Sei',
+    'SHIB': 'Shiba Inu',
+    'SHIBA': 'Shiba Inu',
+    'PEPE': 'Pepe',
+    'ICP': 'Internet Computer',
+    'XLM': 'Stellar',
+    'STELLAR': 'Stellar',
+    'ETC': 'Ethereum Classic',
+    'FIL': 'Filecoin',
+    'HBAR': 'Hedera',
+    'KAS': 'Kaspa',
+    'POL': 'Polygon',
+    'MATIC': 'Polygon',
+    'POLYGON': 'Polygon',
+    'RENDER': 'Render',
+    'RNDR': 'Render',
+    'FET': 'Artificial Superintelligence',
+    'ASI': 'Artificial Superintelligence',
+    'AGIX': 'Artificial Superintelligence',
+    'OCEAN': 'Artificial Superintelligence',
+    'INJ': 'Injective',
+    'ALGO': 'Algorand',
+    'XMR': 'Monero',
+    'MONERO': 'Monero',
+    'ARB': 'Arbitrum',
+    'OP': 'Optimism',
+    'AAVE': 'Aave',
+    'MKR': 'Maker',
+    'SKY': 'Maker',
+    'FTM': 'Fantom',
+    'S': 'Sonic',
+    'SAND': 'Sandbox',
+    'MANA': 'Decentraland',
+    'VET': 'VeChain',
+    'GRT': 'The Graph',
+    'THETA': 'Theta',
+    'FLOKI': 'Floki',
+    'BONK': 'Bonk',
+    'WIF': 'Dogwifhat',
+    'JUP': 'Jupiter',
+    'PENDLE': 'Pendle',
+    'ONDO': 'Ondo',
+    'CRV': 'Curve',
+    'DYDX': 'dYdX',
+    'STX': 'Stacks',
+    'KAVA': 'Kava',
+    'IMX': 'Immutable X',
+    'AXS': 'Axie Infinity',
+    'EGLD': 'MultiversX',
+    'GALA': 'Gala',
+
+    // 2. Global Stocks & Equities
+    'AAPL': 'Apple',
+    'TSLA': 'Tesla',
+    'NVDA': 'Nvidia',
+    'MSFT': 'Microsoft',
+    'AMZN': 'Amazon',
+    'GOOGL': 'Google',
+    'GOOG': 'Google',
+    'META': 'Meta',
+    'NFLX': 'Netflix',
+    'AMD': 'AMD',
+    'INTC': 'Intel',
+    'COIN': 'Coinbase',
+    'MSTR': 'MicroStrategy',
+    'BABA': 'Alibaba',
+    'DIS': 'Disney',
+    'PYPL': 'PayPal',
+    'UBER': 'Uber',
+    'ARM': 'Arm',
+    'PLTR': 'Palantir',
+
+    // 3. Commodities, Indices & Forex
+    'GOLD': 'Gold',
+    'XAU': 'Gold',
+    'SILVER': 'Silver',
+    'XAG': 'Silver',
+    'OIL': 'Crude Oil',
+    'WTI': 'Crude Oil',
+    'BRENT': 'Brent Oil',
+    'SPX': 'S and P 500',
+    'SPY': 'S and P 500',
+    'NDX': 'Nasdaq',
+    'QQQ': 'Nasdaq',
+    'DJI': 'Dow Jones',
+    'DIA': 'Dow Jones',
+    'DXY': 'Dollar Index',
+    'EURUSD': 'Euro Dollar',
+    'GBPUSD': 'Pound Dollar',
+    'USDJPY': 'Dollar Yen',
+  };
+
+  /// Builds clean English voice speech sentence for an alert.
+  /// Pattern: [Asset Name] [Price] [Currency] (+ Note)
   static String buildAlertSpeech({
     required String symbol,
     required double price,
-    required String lang,
+    String lang = 'en',
     String? baseCurrency,
     String? counterCurrency,
     String? customNote,
   }) {
-    // Determine clean asset symbol/name
-    final base = (baseCurrency != null && baseCurrency.isNotEmpty)
-        ? baseCurrency.toUpperCase()
-        : (symbol.contains('/') ? symbol.split('/')[0].trim().toUpperCase() : symbol.trim().toUpperCase());
+    // 1. Resolve base asset and quote currency
+    String base;
+    String counter;
 
-    final counter = (counterCurrency != null && counterCurrency.isNotEmpty)
-        ? counterCurrency.toUpperCase()
-        : (symbol.contains('/') ? symbol.split('/')[1].trim().toUpperCase() : 'USDT');
+    if (baseCurrency != null && baseCurrency.isNotEmpty) {
+      base = baseCurrency.toUpperCase().trim();
+    } else if (symbol.contains('/')) {
+      base = symbol.split('/')[0].toUpperCase().trim();
+    } else if (symbol.contains('-')) {
+      base = symbol.split('-')[0].toUpperCase().trim();
+    } else {
+      base = symbol.toUpperCase().trim();
+    }
 
-    final assetName = _getLocalizedAssetName(base, lang);
-    final currencyName = _getLocalizedCurrencyName(counter, lang);
+    if (counterCurrency != null && counterCurrency.isNotEmpty) {
+      counter = counterCurrency.toUpperCase().trim();
+    } else if (symbol.contains('/')) {
+      counter = symbol.split('/')[1].toUpperCase().trim();
+    } else if (symbol.contains('-')) {
+      counter = symbol.split('-')[1].toUpperCase().trim();
+    } else {
+      counter = 'USD';
+    }
 
-    // Format price without trailing decimals for whole numbers or 2 decimals for small fractions
+    // 2. Resolve Asset Pronunciation (Famous full name or letter-by-letter)
+    final spokenAssetName = _getSpokenAssetName(base);
+
+    // 3. Resolve Currency Pronunciation
+    final spokenCurrency = _getSpokenCurrency(counter);
+
+    // 4. Format Price
     final String priceStr;
     if (price >= 1000) {
-      priceStr = price.toInt().toString();
+      priceStr = price.toStringAsFixed(0);
     } else if (price >= 1) {
       priceStr = price.toStringAsFixed(2);
-    } else {
+    } else if (price >= 0.0001) {
       priceStr = price.toStringAsFixed(4);
+    } else {
+      priceStr = price.toStringAsFixed(6);
     }
 
-    // Exact structured template across all 10 languages:
-    // [Symbol] + [Current Price text] + [Price + Currency]
-    String text;
-    String notePart = '';
+    // 5. Build Final Pattern: [Asset Name] [Price] [Currency]
+    var sentence = '$spokenAssetName $priceStr $spokenCurrency';
 
-    final hasNote = customNote != null && customNote.trim().isNotEmpty;
+    // Append custom note if available
+    if (customNote != null && customNote.trim().isNotEmpty) {
+      sentence += '. Note: ${customNote.trim()}';
+    }
 
-    switch (lang) {
-      case 'fa':
-        if (hasNote) notePart = '. یادداشت: ${customNote.trim()}';
-        text = '$assetName، قیمت فعلی $priceStr $currencyName$notePart';
-        break;
+    return sentence;
+  }
 
-      case 'ar':
-        if (hasNote) notePart = '. ملاحظة: ${customNote.trim()}';
-        text = '$assetName، السعر الحالي $priceStr $currencyName$notePart';
-        break;
+  /// Pronounces famous assets with full name, or spells unlisted tickers letter-by-letter
+  static String _getSpokenAssetName(String baseSymbol) {
+    final clean = baseSymbol.replaceAll(RegExp(r'[^A-Z0-9]'), '');
+    if (_famousAssetNames.containsKey(clean)) {
+      return _famousAssetNames[clean]!;
+    }
+    // Spell out letter-by-letter with space separation (e.g. "W I F", "J U P")
+    if (clean.length <= 5) {
+      return clean.split('').join(' ');
+    }
+    return clean;
+  }
 
-      case 'ckb':
-        if (hasNote) notePart = '. تێبینی: ${customNote.trim()}';
-        text = '$assetName، نرخی ئێستا $priceStr $currencyName$notePart';
-        break;
-
-      case 'tr':
-        if (hasNote) notePart = '. Not: ${customNote.trim()}';
-        text = '$assetName, güncel fiyat $priceStr $currencyName$notePart';
-        break;
-
-      case 'es':
-        if (hasNote) notePart = '. Nota: ${customNote.trim()}';
-        text = '$assetName, precio actual $priceStr $currencyName$notePart';
-        break;
-
-      case 'de':
-        if (hasNote) notePart = '. Notiz: ${customNote.trim()}';
-        text = '$assetName, aktueller Preis $priceStr $currencyName$notePart';
-        break;
-
-      case 'fr':
-        if (hasNote) notePart = '. Note: ${customNote.trim()}';
-        text = '$assetName, prix actuel $priceStr $currencyName$notePart';
-        break;
-
-      case 'ru':
-        if (hasNote) notePart = '. Заметка: ${customNote.trim()}';
-        text = '$assetName, текущая цена $priceStr $currencyName$notePart';
-        break;
-
-      case 'zh':
-        if (hasNote) notePart = '。备注: ${customNote.trim()}';
-        text = '$assetName，当前价格 $priceStr $currencyName$notePart';
-        break;
-
-      case 'en':
+  /// Returns natural spoken currency word
+  static String _getSpokenCurrency(String counterSymbol) {
+    final c = counterSymbol.toUpperCase().replaceAll(RegExp(r'[^A-Z]'), '');
+    switch (c) {
+      case 'USDT':
+      case 'USD':
+      case 'USDC':
+      case 'BUSD':
+      case 'DAI':
+      case 'FDUSD':
+        return 'dollars';
+      case 'EUR':
+        return 'euros';
+      case 'GBP':
+        return 'pounds';
+      case 'JPY':
+        return 'yen';
+      case 'TMN':
+      case 'IRT':
+      case 'TOMAN':
+        return 'toman';
+      case 'BTC':
+      case 'XBT':
+        return 'bitcoin';
+      case 'ETH':
+        return 'ethereum';
+      case 'TRY':
+        return 'lira';
+      case 'AUD':
+        return 'Australian dollars';
+      case 'CAD':
+        return 'Canadian dollars';
+      case 'CHF':
+        return 'Swiss francs';
+      case 'CNY':
+      case 'RMB':
+        return 'yuan';
       default:
-        if (hasNote) notePart = '. Note: ${customNote.trim()}';
-        text = '$assetName, current price $priceStr $currencyName$notePart';
-        break;
+        if (c.length <= 4) {
+          return c.split('').join(' ');
+        }
+        return c;
     }
-
-    return text;
   }
 
-  static String _getLocalizedAssetName(String base, String lang) {
-    if (lang == 'fa') {
-      switch (base) {
-        case 'BTC':
-        case 'XBT':
-          return 'بیت کوین';
-        case 'ETH':
-          return 'اتریوم';
-        case 'SOL':
-          return 'سولانا';
-        case 'BNB':
-          return 'بی ان بی';
-        case 'XRP':
-          return 'ریپل';
-        case 'DOGE':
-          return 'دوج کوین';
-        case 'ADA':
-          return 'کاردانو';
-        case 'TON':
-          return 'تون کوین';
-        case 'TRX':
-          return 'ترون';
-        case 'SHIB':
-          return 'شیبا اینو';
-        case 'PEPE':
-          return 'پپه';
-        case 'AVAX':
-          return 'آوالانچ';
-        case 'DOT':
-          return 'پولکادات';
-        case 'NEAR':
-          return 'نیر';
-        case 'LINK':
-          return 'چین لینک';
-        case 'LTC':
-          return 'لایت کوین';
-        case 'BCH':
-          return 'بیت کوین کش';
-        case 'SUI':
-          return 'سویی';
-        case 'APT':
-          return 'آپتوس';
-        case 'ATOM':
-          return 'کازموس';
-        default:
-          return CryptoIcons.getName(base);
-      }
-    } else if (lang == 'ar') {
-      switch (base) {
-        case 'BTC':
-          return 'بتكوين';
-        case 'ETH':
-          return 'إيثريوم';
-        case 'SOL':
-          return 'سولانا';
-        case 'BNB':
-          return 'بي إن بي';
-        case 'XRP':
-          return 'ريبل';
-        case 'DOGE':
-          return 'دوجكوين';
-        default:
-          return CryptoIcons.getName(base);
-      }
-    } else if (lang == 'ckb') {
-      switch (base) {
-        case 'BTC':
-          return 'بیتکۆین';
-        case 'ETH':
-          return 'ئیسریۆم';
-        case 'SOL':
-          return 'سۆلانا';
-        case 'DOGE':
-          return 'دۆجکۆین';
-        default:
-          return CryptoIcons.getName(base);
-      }
-    } else if (lang == 'zh') {
-      switch (base) {
-        case 'BTC':
-          return '比特币';
-        case 'ETH':
-          return '以太坊';
-        case 'SOL':
-          return '索拉纳';
-        case 'DOGE':
-          return '狗狗币';
-        case 'BNB':
-          return '币安币';
-        case 'XRP':
-          return '瑞波币';
-        default:
-          return CryptoIcons.getName(base);
-      }
-    } else if (lang == 'ru') {
-      switch (base) {
-        case 'BTC':
-          return 'Биткоин';
-        case 'ETH':
-          return 'Эфириум';
-        case 'SOL':
-          return 'Солана';
-        case 'DOGE':
-          return 'Догикоин';
-        default:
-          return CryptoIcons.getName(base);
-      }
-    }
-    return CryptoIcons.getName(base);
-  }
-
-  static String _getLocalizedCurrencyName(String counter, String lang) {
-    final c = counter.toUpperCase();
-    if (c == 'USDT' || c == 'USD' || c == 'USDC' || c == 'BUSD' || c == 'DAI') {
-      switch (lang) {
-        case 'fa':
-          return 'دلار';
-        case 'ar':
-          return 'دولار';
-        case 'ckb':
-          return 'دۆلار';
-        case 'tr':
-          return 'dolar';
-        case 'es':
-          return 'dólares';
-        case 'de':
-          return 'Dollar';
-        case 'fr':
-          return 'dollars';
-        case 'ru':
-          return 'долларов';
-        case 'zh':
-          return '美元';
-        case 'en':
-        default:
-          return 'dollars';
-      }
-    } else if (c == 'TMN' || c == 'IRT' || c == 'TOMAN') {
-      switch (lang) {
-        case 'fa':
-        case 'ar':
-          return 'تومان';
-        case 'ckb':
-          return 'تمەن';
-        case 'tr':
-          return 'Tümen';
-        case 'ru':
-          return 'туманов';
-        case 'zh':
-          return '图曼';
-        case 'en':
-        default:
-          return 'Toman';
-      }
-    } else if (c == 'EUR') {
-      switch (lang) {
-        case 'fa':
-        case 'ar':
-        case 'ckb':
-          return 'یورو';
-        case 'de':
-        case 'tr':
-          return 'Euro';
-        case 'es':
-        case 'fr':
-        case 'en':
-          return 'Euros';
-        case 'ru':
-          return 'евро';
-        case 'zh':
-          return '欧元';
-        default:
-          return 'Euro';
-      }
-    }
-    return c;
-  }
-
-  /// Speaks the given text using the platform TTS engine
+  /// Speaks the given text using the platform English TTS engine
   Future<void> speak({
     required String text,
-    required String lang,
+    String lang = 'en',
     double rate = 1.0,
     double pitch = 1.0,
   }) async {
     try {
-      debugPrint('[TTS] Speaking: "$text" (Lang: $lang)');
+      debugPrint('[TTS] Speaking (English): "$text"');
       await _channel.invokeMethod('speak', {
         'text': text,
-        'lang': lang,
+        'lang': 'en',
         'rate': rate,
         'pitch': pitch,
       });
@@ -310,16 +295,15 @@ class TtsService {
     } catch (_) {}
   }
 
-  /// Plays a quick voice test utterance in the selected language
-  Future<void> testVoice(String lang) async {
+  /// Plays a quick voice test utterance in English
+  Future<void> testVoice([String lang = 'en']) async {
     final sample = buildAlertSpeech(
       symbol: 'BTC/USDT',
       baseCurrency: 'BTC',
       counterCurrency: 'USDT',
       price: 87420.0,
-      lang: lang,
-      customNote: lang == 'fa' ? 'رسیدن به هدف' : 'Target reached',
+      customNote: 'Take profit',
     );
-    await speak(text: sample, lang: lang);
+    await speak(text: sample, lang: 'en');
   }
 }
