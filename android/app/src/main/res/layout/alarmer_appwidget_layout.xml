@@ -18,7 +18,7 @@
         <ImageView
             android:layout_width="20dp"
             android:layout_height="20dp"
-            android:src="@drawable/ic_launcher_foreground" />
+            android:src="@mipmap/ic_launcher" />
 
         <TextView
             android:id="@+id/widget_header_title"
@@ -100,7 +100,7 @@
                     android:id="@+id/item_1_badge"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:background="@drawable/badge_green"
+                    android:background="@drawable/widget_badge_bg"
                     android:paddingStart="6dp"
                     android:paddingTop="2dp"
                     android:paddingEnd="6dp"
@@ -163,7 +163,7 @@
                     android:id="@+id/item_2_badge"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:background="@drawable/badge_red"
+                    android:background="@drawable/widget_badge_bg"
                     android:paddingStart="6dp"
                     android:paddingTop="2dp"
                     android:paddingEnd="6dp"
@@ -226,7 +226,7 @@
                     android:id="@+id/item_3_badge"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:background="@drawable/badge_done"
+                    android:background="@drawable/widget_badge_bg"
                     android:paddingStart="6dp"
                     android:paddingTop="2dp"
                     android:paddingEnd="6dp"

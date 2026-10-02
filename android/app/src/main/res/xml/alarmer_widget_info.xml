@@ -9,7 +9,7 @@
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
     android:initialLayout="@layout/alarmer_appwidget_layout"
-    android:previewImage="@drawable/ic_launcher_foreground"
+    android:previewImage="@mipmap/ic_launcher"
     android:updatePeriodMillis="1800000"
     android:description="@string/widget_desc">
 </appwidget-provider>
