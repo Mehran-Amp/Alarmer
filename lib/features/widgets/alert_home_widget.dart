@@ -5,9 +5,12 @@ import '../alert_engine/models/trigger_mode.dart';
 import '../alert_engine/repositories/json_alert_rule_repository.dart';
 import '../../core/utils/format_utils.dart';
 
-/// Interactive Home Screen Widget representation for Alarmer.
-/// Displays active market alerts, live ticker prices, percentage change, and quick actions.
-/// Always rendered in English with exact app alert order, real percentage + arrow, and dynamic theme contrast.
+/// Redesigned, ultra-clean Home Screen Widget representation for Alarmer.
+/// - Exact alert order
+/// - Clean single-line row: Symbol | Price | Pure Percentage + Arrow
+/// - Dedicated Check/Refresh All button in header
+/// - 100% Theme unified with active app palette
+/// - No exchange name, no notes, compact wrap-content height
 class AlertHomeWidgetView extends StatelessWidget {
   final JsonAlertRuleRepository repository;
   final String lang;
@@ -36,29 +39,29 @@ class AlertHomeWidgetView extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: theme.cardColor,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: theme.dividerColor,
           width: 1.2,
         ),
         boxShadow: [
           BoxShadow(
-            color: theme.shadowColor.withValues(alpha: isDark ? 0.2 : 0.06),
-            blurRadius: 12,
+            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.05),
+            blurRadius: 10,
             offset: const Offset(0, 3),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Widget Header (Always English, High Contrast)
+          // Header Bar with Check All Button
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(6),
+                padding: const EdgeInsets.all(5),
                 decoration: BoxDecoration(
                   color: theme.colorScheme.primary.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
@@ -66,7 +69,7 @@ class AlertHomeWidgetView extends StatelessWidget {
                 child: Icon(
                   Icons.bolt_rounded,
                   color: theme.colorScheme.primary,
-                  size: 18,
+                  size: 16,
                 ),
               ),
               const SizedBox(width: 8),
@@ -75,7 +78,7 @@ class AlertHomeWidgetView extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Alarmer Live Widget',
+                      'Alarmer Live',
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
@@ -83,76 +86,63 @@ class AlertHomeWidgetView extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '${activeRules.length} active alerts • ${DateFormat('HH:mm').format(DateTime.now())}',
+                      '${activeRules.length} active • ${DateFormat('HH:mm').format(DateTime.now())}',
                       style: TextStyle(
-                        fontSize: 10,
-                        color: theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                        fontSize: 9.5,
+                        color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF4B5563),
                       ),
                     ),
                   ],
                 ),
               ),
-              // Live Indicator Pill
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: theme.colorScheme.primary.withValues(alpha: 0.3),
-                    width: 1,
+              // Check / Refresh All Currencies Button
+              Material(
+                color: theme.colorScheme.primary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(8),
+                child: InkWell(
+                  onTap: onRefresh,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.refresh_rounded,
+                          size: 13,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Check All',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'LIVE',
-                      style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w900,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-                  ],
-                ),
               ),
-              if (onRefresh != null) ...[
-                const SizedBox(width: 4),
-                IconButton(
-                  icon: const Icon(Icons.refresh_rounded, size: 18),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                  onPressed: onRefresh,
-                  tooltip: 'Refresh All',
-                ),
-              ],
             ],
           ),
 
           const SizedBox(height: 8),
           Divider(height: 1, color: theme.dividerColor),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
 
-          // Alerts List in Widget
+          // Alert Items List (One horizontal line per alert, wrap height)
           if (allRules.isEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 14),
+              padding: const EdgeInsets.symmetric(vertical: 12),
               child: Center(
                 child: Text(
                   'No active alerts configured',
                   style: TextStyle(
-                    fontSize: 12,
-                    color: theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                    fontSize: 11,
+                    color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF4B5563),
                   ),
                 ),
               ),
@@ -162,21 +152,21 @@ class AlertHomeWidgetView extends StatelessWidget {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: isCompact ? allRules.take(3).length : allRules.take(5).length,
-              separatorBuilder: (_, __) => const SizedBox(height: 6),
+              separatorBuilder: (_, __) => const SizedBox(height: 5),
               itemBuilder: (context, index) {
                 final rule = allRules[index];
-                return _buildWidgetAlertRow(context, rule, theme, isDark);
+                return _buildSingleLineAlertRow(context, rule, theme, isDark);
               },
             ),
 
           if (allRules.length > (isCompact ? 3 : 5)) ...[
-            const SizedBox(height: 6),
+            const SizedBox(height: 4),
             Center(
               child: Text(
                 '+ ${allRules.length - (isCompact ? 3 : 5)} more alerts in background',
                 style: TextStyle(
-                  fontSize: 10,
-                  color: theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                  fontSize: 9.5,
+                  color: isDark ? const Color(0xFF9CA3AF) : const Color(0xFF4B5563),
                 ),
               ),
             ),
@@ -186,7 +176,8 @@ class AlertHomeWidgetView extends StatelessWidget {
     );
   }
 
-  Widget _buildWidgetAlertRow(
+  /// Single line alert row: Symbol | Price | Percentage+Arrow Badge
+  Widget _buildSingleLineAlertRow(
     BuildContext context,
     AlertRule rule,
     ThemeData theme,
@@ -197,7 +188,7 @@ class AlertHomeWidgetView extends StatelessWidget {
         ? FormatUtils.formatPrice(currentPrice, currencySymbol: rule.pair.counterCurrency)
         : '—';
 
-    // One-shot condition done check
+    // Check if one-shot condition fulfilled
     final isOneShot = rule.conditionType == AlertConditionType.priceThreshold;
     final isDone = isOneShot && (!rule.isActive || rule.isTriggered);
 
@@ -210,7 +201,7 @@ class AlertHomeWidgetView extends StatelessWidget {
       badgeBgColor = isDark ? const Color(0xFF2B2410) : const Color(0xFFFEF3C7);
       badgeTextColor = isDark ? const Color(0xFFE3B341) : const Color(0xFFD97706);
     } else {
-      // Calculate real percentage change from base / last checked price
+      // Calculate percentage change since last check or base price
       final base = rule.basePrice ?? currentPrice;
       double diffPct = 0.0;
       if (base > 0 && currentPrice > 0) {
@@ -225,9 +216,11 @@ class AlertHomeWidgetView extends StatelessWidget {
       badgeText = '$sign${diffPct.toStringAsFixed(2)}% $arrow';
 
       if (isUp) {
+        // Entire percentage badge (text, number, %, sign, arrow) in unified green
         badgeBgColor = isDark ? const Color(0xFF1A2E20) : const Color(0xFFDCFCE7);
         badgeTextColor = isDark ? const Color(0xFF3FB950) : const Color(0xFF15803D);
       } else {
+        // Entire percentage badge in unified red
         badgeBgColor = isDark ? const Color(0xFF2E1A1D) : const Color(0xFFFEE2E2);
         badgeTextColor = isDark ? const Color(0xFFF85149) : const Color(0xFFB91C1C);
       }
@@ -236,20 +229,20 @@ class AlertHomeWidgetView extends StatelessWidget {
     final priceColor = isDark ? const Color(0xFFF59E0B) : const Color(0xFFD97706);
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
       decoration: BoxDecoration(
         color: isDark
-            ? theme.scaffoldBackgroundColor.withValues(alpha: 0.7)
+            ? theme.scaffoldBackgroundColor.withValues(alpha: 0.8)
             : theme.scaffoldBackgroundColor,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: theme.dividerColor.withValues(alpha: 0.8),
-          width: 1,
+          color: theme.dividerColor.withValues(alpha: 0.6),
+          width: 0.8,
         ),
       ),
       child: Row(
         children: [
-          // Symbol
+          // Symbol (Fixed Left)
           Text(
             rule.pair.displayName,
             style: TextStyle(
@@ -260,7 +253,7 @@ class AlertHomeWidgetView extends StatelessWidget {
           ),
           const SizedBox(width: 8),
 
-          // Live Current Price
+          // Price (Middle Expanded)
           Expanded(
             child: Text(
               formattedPrice,
@@ -273,12 +266,12 @@ class AlertHomeWidgetView extends StatelessWidget {
             ),
           ),
 
-          // Percentage + Arrow Badge
+          // Percentage + Arrow (Fixed Right, Unified Color)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2.5),
             decoration: BoxDecoration(
               color: badgeBgColor,
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(5),
             ),
             child: Text(
               badgeText,

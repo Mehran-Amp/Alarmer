@@ -12,13 +12,27 @@ import org.json.JSONObject
 
 /**
  * Native Android Home Screen AppWidget Provider for Alarmer.
- * - Dynamic theme & background contrast matching active app theme (light, dark, amoled)
- * - Exact alert order
- * - Pure percentage change + arrow (+X.XX% ▲ / -X.XX% ▼)
- * - Dynamic compact height wrapping around active alerts
- * - 100% RemoteViews safe
+ * - Single-line rows: Symbol | Monospace Price | Percentage+Arrow Badge
+ * - Interactive 'Check All' button in header that triggers refresh
+ * - Full theme fidelity (light, dark, amoled) with high contrast
+ * - Compact wrap-content height matching active alerts count
  */
 class AlarmerAppWidgetProvider : AppWidgetProvider() {
+
+    override fun onReceive(context: Context, intent: Intent) {
+        super.onReceive(context, intent)
+        if (intent.action == ACTION_REFRESH_WIDGET) {
+            // Re-render all widgets immediately and bring app to sync
+            updateAllWidgets(context)
+            try {
+                val launchIntent = Intent(context, MainActivity::class.java).apply {
+                    action = "ACTION_CHECK_ALL_ALERTS"
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                }
+                context.startActivity(launchIntent)
+            } catch (_: Exception) {}
+        }
+    }
 
     override fun onUpdate(
         context: Context,
@@ -31,6 +45,8 @@ class AlarmerAppWidgetProvider : AppWidgetProvider() {
     }
 
     companion object {
+        const val ACTION_REFRESH_WIDGET = "com.example.bitcoin_checker.ACTION_REFRESH_WIDGET"
+
         fun updateAppWidget(
             context: Context,
             appWidgetManager: AppWidgetManager,
@@ -39,17 +55,29 @@ class AlarmerAppWidgetProvider : AppWidgetProvider() {
             try {
                 val views = RemoteViews(context.packageName, R.layout.alarmer_appwidget_layout)
 
-                // Intent to open main app on widget click
-                val intent = Intent(context, MainActivity::class.java).apply {
+                // Tap on widget root opens app
+                val openIntent = Intent(context, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                 }
-                val pendingIntent = PendingIntent.getActivity(
+                val openPendingIntent = PendingIntent.getActivity(
                     context,
                     0,
-                    intent,
+                    openIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                 )
-                views.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
+                views.setOnClickPendingIntent(R.id.widget_root, openPendingIntent)
+
+                // Tap on 'Check All' button in header
+                val refreshIntent = Intent(context, AlarmerAppWidgetProvider::class.java).apply {
+                    action = ACTION_REFRESH_WIDGET
+                }
+                val refreshPendingIntent = PendingIntent.getBroadcast(
+                    context,
+                    1,
+                    refreshIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                views.setOnClickPendingIntent(R.id.widget_refresh_btn, refreshPendingIntent)
 
                 val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
                 val jsonStr = prefs.getString("flutter.widget_alerts_json", null)
@@ -63,8 +91,8 @@ class AlarmerAppWidgetProvider : AppWidgetProvider() {
                     try {
                         val root = JSONObject(jsonStr)
                         val activeCount = root.optInt("activeCount", 0)
-                        val headerTitle = root.optString("title", "Alarmer Live Widget")
-                        val subtitle = root.optString("subtitle", "$activeCount active alerts • Live")
+                        val headerTitle = root.optString("title", "Alarmer Live")
+                        val subtitle = root.optString("subtitle", "$activeCount active")
                         val footerText = root.optString("footerText", "Tap to open Alarmer")
                         val items = root.optJSONArray("items")
                         val themeObj = root.optJSONObject("theme")
@@ -89,8 +117,8 @@ class AlarmerAppWidgetProvider : AppWidgetProvider() {
                         views.setTextViewText(R.id.widget_subtitle, subtitle)
                         views.setTextColor(R.id.widget_subtitle, textSecondaryColor)
 
-                        views.setTextViewText(R.id.widget_active_badge, "⚡ LIVE")
-                        views.setTextColor(R.id.widget_active_badge, primaryColor)
+                        views.setTextViewText(R.id.widget_refresh_btn, "⟳ Check All")
+                        views.setTextColor(R.id.widget_refresh_btn, primaryColor)
 
                         views.setTextViewText(R.id.widget_footer_text, footerText)
                         views.setTextColor(R.id.widget_footer_text, primaryColor)
@@ -125,7 +153,7 @@ class AlarmerAppWidgetProvider : AppWidgetProvider() {
 
                                     views.setTextViewText(rowBadges[i], badge)
 
-                                    // Badge contrast color
+                                    // Entire badge text in pure green / red / gold
                                     if (isDone) {
                                         views.setTextColor(rowBadges[i], if (isDark) 0xFFE3B341.toInt() else 0xFFD97706.toInt())
                                     } else if (isPositive) {
@@ -146,9 +174,9 @@ class AlarmerAppWidgetProvider : AppWidgetProvider() {
                     }
                 } else {
                     // Default fallback
-                    views.setTextViewText(R.id.widget_header_title, "Alarmer Live Widget")
-                    views.setTextViewText(R.id.widget_subtitle, "1 active alert • Live")
-                    views.setTextViewText(R.id.widget_active_badge, "⚡ LIVE")
+                    views.setTextViewText(R.id.widget_header_title, "Alarmer Live")
+                    views.setTextViewText(R.id.widget_subtitle, "1 active")
+                    views.setTextViewText(R.id.widget_refresh_btn, "⟳ Check All")
                     views.setViewVisibility(R.id.item_1_root, View.VISIBLE)
                     views.setViewVisibility(R.id.item_2_root, View.GONE)
                     views.setViewVisibility(R.id.item_3_root, View.GONE)

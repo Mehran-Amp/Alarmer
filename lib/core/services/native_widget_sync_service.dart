@@ -79,8 +79,8 @@ class NativeWidgetSyncService {
 
       final payload = {
         'activeCount': activeCount,
-        'title': 'Alarmer Live Widget',
-        'subtitle': '$activeCount active alerts • Live',
+        'title': 'Alarmer Live',
+        'subtitle': '$activeCount active',
         'footerText': 'Tap to open Alarmer',
         'theme': themeColors,
         'items': items,
