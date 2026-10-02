@@ -67,8 +67,14 @@ class AlertRule extends Equatable {
   /// Custom note / trade thesis (e.g. "TP1 Hit - take profit", "Stop Loss")
   final String? customNote;
 
+  /// Convenient alias for customNote
+  String? get note => customNote;
+
   /// Custom alarm sound tone ID for this specific alert
   final String? customSound;
+
+  /// Preferred voice language for Text-To-Speech (e.g. "fa", "en", "ar")
+  final String? language;
 
   /// Whether sound is enabled for this alert
   final bool soundEnabled;
@@ -120,39 +126,35 @@ class AlertRule extends Equatable {
     }
   }
 
-  /// Alias for condition evaluation mapping
-  ConditionType get condition {
+  /// Maps conditionType to display localized title
+  String getLocalizedTitle(String lang) {
     switch (conditionType) {
       case AlertConditionType.priceThreshold:
-        return direction == AlertDirection.above
-            ? ConditionType.above
-            : ConditionType.below;
+        return lang == 'fa'
+            ? 'هشدار عبور از قیمت هدف'
+            : (lang == 'ar'
+                ? 'إنذار تجاوز السعر المستهدف'
+                : 'Target Price Alert');
       case AlertConditionType.percentChange:
-        if (direction == AlertDirection.bothSides) {
-          return ConditionType.percentBoth;
-        }
-        return direction == AlertDirection.above
-            ? ConditionType.percentUp
-            : ConditionType.percentDown;
+        return lang == 'fa'
+            ? 'هشدار تغییر درصدی قیمت'
+            : (lang == 'ar'
+                ? 'إنذار نسبة التغير في السعر'
+                : 'Percentage Change Alert');
       case AlertConditionType.absolutePriceChange:
-        return ConditionType.absolutePriceChange;
+        return lang == 'fa'
+            ? 'هشدار مقدار نوسان دلاری'
+            : (lang == 'ar'
+                ? 'إنذار مقدار التغير السعري'
+                : 'Price Delta Alert');
       case AlertConditionType.volumeChange:
-        return ConditionType.volumeSurge;
+        return lang == 'fa'
+            ? 'هشدار پامپ و حجم معاملات'
+            : (lang == 'ar'
+                ? 'إنذار حجم التداول'
+                : 'Volume Surge Alert');
     }
   }
-
-  /// Relevant threshold target value across all condition types
-  double? get targetValue =>
-      targetPrice ?? percent ?? deltaAbsolute ?? volumePercent;
-
-  /// Alias returning checkIntervalSeconds
-  int get checkInterval => checkIntervalSeconds;
-
-  /// Alias returning lastCheckedPrice
-  double? get lastPrice => lastCheckedPrice;
-
-  /// Alias returning isActive
-  bool get isEnabled => isActive;
 
   const AlertRule({
     required this.uuid,
@@ -173,6 +175,7 @@ class AlertRule extends Equatable {
     this.baseVolume,
     this.customNote,
     this.customSound,
+    this.language,
     this.soundEnabled = true,
     this.ttsEnabled = false,
     this.vibrationEnabled = true,
@@ -200,6 +203,7 @@ class AlertRule extends Equatable {
     double? currentVolume,
     String? customNote,
     String? customSound,
+    String? language,
     bool soundEnabled = true,
     bool ttsEnabled = false,
     bool vibrationEnabled = true,
@@ -229,6 +233,7 @@ class AlertRule extends Equatable {
       baseVolume: currentVolume,
       customNote: customNote,
       customSound: customSound,
+      language: language,
       soundEnabled: soundEnabled,
       ttsEnabled: ttsEnabled,
       vibrationEnabled: vibrationEnabled,
@@ -263,6 +268,7 @@ class AlertRule extends Equatable {
     double? volumePercent,
     String? customNote,
     String? customSound,
+    String? language,
     bool? soundEnabled,
     bool? ttsEnabled,
     bool? vibrationEnabled,
@@ -292,6 +298,7 @@ class AlertRule extends Equatable {
       volumePercent: volumePercent ?? this.volumePercent,
       customNote: customNote ?? this.customNote,
       customSound: customSound ?? this.customSound,
+      language: language ?? this.language,
       soundEnabled: soundEnabled ?? this.soundEnabled,
       ttsEnabled: ttsEnabled ?? this.ttsEnabled,
       vibrationEnabled: vibrationEnabled ?? this.vibrationEnabled,
@@ -327,6 +334,7 @@ class AlertRule extends Equatable {
         'baseVolume': baseVolume,
         'customNote': customNote,
         'customSound': customSound,
+        'language': language,
         'soundEnabled': soundEnabled,
         'ttsEnabled': ttsEnabled,
         'vibrationEnabled': vibrationEnabled,
@@ -361,6 +369,7 @@ class AlertRule extends Equatable {
         baseVolume: (json['baseVolume'] as num?)?.toDouble(),
         customNote: json['customNote'] as String?,
         customSound: json['customSound'] as String?,
+        language: json['language'] as String?,
         soundEnabled: json['soundEnabled'] as bool? ?? true,
         ttsEnabled: json['ttsEnabled'] as bool? ?? false,
         vibrationEnabled: json['vibrationEnabled'] as bool? ?? true,
@@ -401,6 +410,7 @@ class AlertRule extends Equatable {
         baseVolume,
         customNote,
         customSound,
+        language,
         soundEnabled,
         ttsEnabled,
         vibrationEnabled,
