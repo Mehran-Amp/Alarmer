@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../alert_engine/models/alert_rule.dart';
+import '../alert_engine/models/trigger_mode.dart';
 import '../alert_engine/repositories/json_alert_rule_repository.dart';
 import '../../core/localization/app_strings.dart';
 

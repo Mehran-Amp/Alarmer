@@ -4,6 +4,9 @@ import '../../exchanges/base/currency_pair.dart';
 import 'alert_type.dart';
 import 'trigger_mode.dart';
 
+export 'alert_type.dart';
+export 'trigger_mode.dart';
+
 /// Personal Price Alert Rule entity.
 /// Represents a single, dedicated condition with its own polling interval, sound, vibration & note.
 class AlertRule extends Equatable {
