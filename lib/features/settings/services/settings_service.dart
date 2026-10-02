@@ -75,4 +75,8 @@ class SettingsService extends ChangeNotifier {
   Future<void> setAlarmVolume(double volume) async {
     await update(_settings.copyWith(alarmVolume: volume));
   }
+
+  Future<void> setTtsVoiceLanguage(String voiceLang) async {
+    await update(_settings.copyWith(ttsVoiceLanguage: voiceLang));
+  }
 }

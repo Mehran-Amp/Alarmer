@@ -12,6 +12,7 @@ enum AppThemePalette {
 class AppSettings {
   final AppThemePalette themePalette;
   final String language;
+  final String ttsVoiceLanguage;
   final bool soundEnabled;
   final bool vibrationEnabled;
   final String soundName;
@@ -21,6 +22,7 @@ class AppSettings {
   const AppSettings({
     this.themePalette = AppThemePalette.darkGreen,
     this.language = 'fa',
+    this.ttsVoiceLanguage = 'app_default',
     this.soundEnabled = true,
     this.vibrationEnabled = true,
     this.soundName = 'alarm_siren',
@@ -28,9 +30,14 @@ class AppSettings {
     this.alarmDurationSec = 5,
   });
 
+  /// Resolves effective TTS voice language code ('fa', 'en', 'ar', etc.)
+  String get effectiveTtsLanguage =>
+      ttsVoiceLanguage == 'app_default' ? language : ttsVoiceLanguage;
+
   AppSettings copyWith({
     AppThemePalette? themePalette,
     String? language,
+    String? ttsVoiceLanguage,
     bool? soundEnabled,
     bool? vibrationEnabled,
     String? soundName,
@@ -40,6 +47,7 @@ class AppSettings {
     return AppSettings(
       themePalette: themePalette ?? this.themePalette,
       language: language ?? this.language,
+      ttsVoiceLanguage: ttsVoiceLanguage ?? this.ttsVoiceLanguage,
       soundEnabled: soundEnabled ?? this.soundEnabled,
       vibrationEnabled: vibrationEnabled ?? this.vibrationEnabled,
       soundName: soundName ?? this.soundName,
@@ -51,6 +59,7 @@ class AppSettings {
   Map<String, dynamic> toJson() => {
         'themePalette': themePalette.name,
         'language': language,
+        'ttsVoiceLanguage': ttsVoiceLanguage,
         'soundEnabled': soundEnabled,
         'vibrationEnabled': vibrationEnabled,
         'soundName': soundName,
@@ -73,6 +82,7 @@ class AppSettings {
     return AppSettings(
       themePalette: palette,
       language: (json['language'] as String?) ?? 'fa',
+      ttsVoiceLanguage: (json['ttsVoiceLanguage'] as String?) ?? 'app_default',
       soundEnabled: (json['soundEnabled'] as bool?) ?? true,
       vibrationEnabled: (json['vibrationEnabled'] as bool?) ?? true,
       soundName: (json['soundName'] as String?) ?? 'alarm_siren',

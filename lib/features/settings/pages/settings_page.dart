@@ -718,7 +718,143 @@ class _SettingsPageState extends State<SettingsPage> {
                   activeColor: theme.colorScheme.primary,
                   onChanged: (val) => settingsService.toggleVibration(val),
                 ),
+                Divider(height: 1, color: theme.dividerColor),
                 const SizedBox(height: 10),
+
+                // Voice Speech Language Selector
+                Row(
+                  children: [
+                    Icon(Icons.record_voice_over_rounded, color: theme.colorScheme.primary, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isFa ? 'زبان گفتار صوتی گوینده (Voice Speech)' : 'Voice Speech Language',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.onSurface,
+                            ),
+                          ),
+                          Text(
+                            isFa
+                                ? 'ساختار خوانش: نام نماد + قیمت فعلی + ۸۷,۴۲۰ دلار'
+                                : 'Pattern: Symbol + Current Price + Currency Value',
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => settingsService.setTtsVoiceLanguage('app_default'),
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                          decoration: BoxDecoration(
+                            color: settings.ttsVoiceLanguage == 'app_default'
+                                ? theme.colorScheme.primary.withValues(alpha: 0.15)
+                                : theme.colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: settings.ttsVoiceLanguage == 'app_default'
+                                  ? theme.colorScheme.primary
+                                  : theme.dividerColor,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                settings.ttsVoiceLanguage == 'app_default'
+                                    ? Icons.check_circle_rounded
+                                    : Icons.circle_outlined,
+                                size: 16,
+                                color: settings.ttsVoiceLanguage == 'app_default'
+                                    ? theme.colorScheme.primary
+                                    : theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                              ),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  isFa ? 'زبان برنامه (${currentLangObj['native']})' : 'App Language',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: settings.ttsVoiceLanguage == 'app_default'
+                                        ? theme.colorScheme.primary
+                                        : theme.colorScheme.onSurface,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => settingsService.setTtsVoiceLanguage('en'),
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                          decoration: BoxDecoration(
+                            color: settings.ttsVoiceLanguage == 'en'
+                                ? theme.colorScheme.primary.withValues(alpha: 0.15)
+                                : theme.colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: settings.ttsVoiceLanguage == 'en'
+                                  ? theme.colorScheme.primary
+                                  : theme.dividerColor,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                settings.ttsVoiceLanguage == 'en'
+                                    ? Icons.check_circle_rounded
+                                    : Icons.circle_outlined,
+                                size: 16,
+                                color: settings.ttsVoiceLanguage == 'en'
+                                    ? theme.colorScheme.primary
+                                    : theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                              ),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  isFa ? 'انگلیسی (English)' : 'English',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: settings.ttsVoiceLanguage == 'en'
+                                        ? theme.colorScheme.primary
+                                        : theme.colorScheme.onSurface,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
 
                 // 4. Test Alarm & Voice Speech Buttons
                 Row(
@@ -743,12 +879,17 @@ class _SettingsPageState extends State<SettingsPage> {
                     Expanded(
                       child: OutlinedButton.icon(
                         onPressed: () async {
-                          await TtsService.instance.testVoice(lang);
+                          final voiceLang = settings.effectiveTtsLanguage;
+                          await TtsService.instance.testVoice(voiceLang);
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).hideCurrentSnackBar();
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(isFa ? 'در حال پخش گفتار صوتی فارسی...' : 'Speaking test voice speech...'),
+                                content: Text(
+                                  isFa
+                                      ? 'در حال پخش نمونه گفتار صوتی ($voiceLang)...'
+                                      : 'Speaking voice announcement ($voiceLang)...',
+                                ),
                                 backgroundColor: theme.colorScheme.surfaceContainerHighest,
                                 behavior: SnackBarBehavior.floating,
                                 duration: const Duration(seconds: 2),
